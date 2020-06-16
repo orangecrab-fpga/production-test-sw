@@ -10,6 +10,7 @@ CFLAGS += -I$(FW_DIRECTORY)/include
 
 OBJECTS = isr.o			\
 		sleep.o         \
+		flash-spi.o     \
 	    main.o
 
 
