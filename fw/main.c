@@ -14,6 +14,7 @@
 #include <uart.h>
 
 #include <sleep.h>
+#include <flash-spi.h>
 
 
 int main(int i, char **c)
@@ -30,21 +31,28 @@ int main(int i, char **c)
 
 	uart_init();
 
-
 	printf("\n");
 
 	printf("Hello from OrangeCrab! o/ \n");
- 	printf("Info: firmware build date="__DATE__ " " __TIME__ " \n\n");
+ 	printf("{\"firmware build date\":\""__DATE__ "\", \"firmware build time\": \"" __TIME__ "\"}\n");
 
- 	printf("Info: Migen git sha1="MIGEN_GIT_SHA1"\n");
- 	printf("Info: LiteX git sha1="LITEX_GIT_SHA1"\n");
- 	printf("\n");
+ 	printf("{\"migen sha1\":\""MIGEN_GIT_SHA1"\"}\n");
+ 	printf("{\"litex sha1\":\""LITEX_GIT_SHA1"\"}\n");
 
 	/* Init Memory */
 	int sdr_ok = sdrinit();
-	
 
-	
+	/* Check for SPI FLASH */	
+	spiInit();
+	unsigned char buf[6] = {0};
+	spiId(buf);
+
+	printf("{\"spi id\":");
+	for(int i = 0; i < 5; i++){
+		printf("%c\"0x%02x\"",i > 0 ? ',' : '[', buf[i]);
+	}
+	printf("]}\n");
+
 
 
 

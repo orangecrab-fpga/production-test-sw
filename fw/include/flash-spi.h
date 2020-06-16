@@ -1,6 +1,7 @@
 /*  Originally from: https://github.com/im-tomu/foboot/blob/master/src/include/spi.h
  *  Apache License Version 2.0
  *	Copyright 2019 Sean 'xobs' Cross <sean@xobs.io>
+ *  Copyright 2020 Gregory Davill <greg.davill@gmail.com>
  */
 
 #ifndef BB_SPI_H_
@@ -20,7 +21,7 @@ int spiBeginErase64(uint32_t erase_addr);
 int spiBeginWrite(uint32_t addr, const void *data, unsigned int count);
 void spiEnableQuad(void);
 
-uint32_t spiId(void);
+uint32_t spiId(unsigned char*);
 
 int spiWrite(uint32_t addr, const uint8_t *data, unsigned int count);
 uint8_t spiReset(void);

@@ -1,6 +1,7 @@
 /*  Originally from: https://github.com/im-tomu/foboot/blob/master/sw/src/spi.c
  *  Apache License Version 2.0
  *	Copyright 2019 Sean 'xobs' Cross <sean@xobs.io>
+ *  Copyright 2020 Gregory Davill <greg.davill@gmail.com>
  */
 
 #include <stdint.h>
@@ -76,26 +77,26 @@ __attribute__((used))
 uint32_t spi_id;
 
 __attribute__((used))
-uint32_t spiId(void) {
-	spi_id = 0;
+uint32_t spiId(unsigned char* data) {
+	unsigned char* ptr = data;
 
 	spiBegin();
 	spi_single_tx(0x90);               // Read manufacturer ID
 	spi_single_tx(0x00);               // Dummy byte 1
 	spi_single_tx(0x00);               // Dummy byte 2
 	spi_single_tx(0x00);               // Dummy byte 3
-	spi_id = (spi_id << 8) | spi_single_rx();  // Manufacturer ID
-	spi_id = (spi_id << 8) | spi_single_rx();  // Device ID
+	*ptr++ = (spi_id << 8) | spi_single_rx();  // Manufacturer ID
+	*ptr++ = (spi_id << 8) | spi_single_rx();  // Device ID
 	spiEnd();
 
 	spiBegin();
 	spi_single_tx(0x9f);               // Read device id
-	(void)spi_single_rx();             // Manufacturer ID (again)
-	spi_id = (spi_id << 8) | spi_single_rx();  // Memory Type
-	spi_id = (spi_id << 8) | spi_single_rx();  // Memory Size
+	*ptr++ = spi_single_rx();             // Manufacturer ID (again)
+	*ptr++ = (spi_id << 8) | spi_single_rx();  // Memory Type
+	*ptr++ = (spi_id << 8) | spi_single_rx();  // Memory Size
 	spiEnd();
 
-	return spi_id;
+	return ptr - data;
 }
 
 int spiBeginErase4(uint32_t erase_addr) {
@@ -194,8 +195,6 @@ int spiInit(void) {
 	// Reset the SPI flash, which will return it to SPI mode even
 	// if it's in QPI mode, and ensure the chip is accepting commands.
 	spiReset();
-
-	spiId();
 
 	return 0;
 }
