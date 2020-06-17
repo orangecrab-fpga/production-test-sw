@@ -17,6 +17,12 @@
 #include <flash-spi.h>
 
 
+void print_buffer(uint8_t* ptr, uint8_t len){
+	for(int i = 0; i < len){
+		printf("%s\"0x%02x\"",i > 0 ? "," : 0, buf[i]);
+	}
+}
+
 int main(int i, char **c)
 {	
 
@@ -44,16 +50,18 @@ int main(int i, char **c)
 
 	/* Check for SPI FLASH */	
 	spiInit();
-	unsigned char buf[6] = {0};
+	unsigned char buf[8] = {0};
 	spiId(buf);
 
-	printf("{\"spi id\":");
-	for(int i = 0; i < 5; i++){
-		printf("%c\"0x%02x\"",i > 0 ? ',' : '[', buf[i]);
-	}
+	printf("{\"spi id\":[");
+	print_buffer(buf, 5);
 	printf("]}\n");
 
-
+	// Check Flash UUID
+	spi_read_uuid(buf);
+	printf("{\"spi uuid\":[");
+	print_buffer(buf, 8);
+	printf("]}\n");
 
 
 	return 0;

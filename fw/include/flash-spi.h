@@ -21,7 +21,8 @@ int spiBeginErase64(uint32_t erase_addr);
 int spiBeginWrite(uint32_t addr, const void *data, unsigned int count);
 void spiEnableQuad(void);
 
-uint32_t spiId(unsigned char*);
+void spi_read_uuid(uint8_t* uuid);
+uint32_t spiId(uint8_t*);
 
 int spiWrite(uint32_t addr, const uint8_t *data, unsigned int count);
 uint8_t spiReset(void);
