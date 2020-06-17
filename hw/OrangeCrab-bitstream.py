@@ -221,7 +221,7 @@ def main():
 
     # create compressed config (ECP5 specific)
     output_bitstream = os.path.join(builder.gateware_dir, f"{soc.platform.name}.bit")
-    os.system(f"ecppack --spimode qspi --freq 38.8 --compress --input {output_config} --bit {output_bitstream}")
+    os.system(f"ecppack --freq 38.8 --compress --input {output_config} --bit {output_bitstream}")
 
     dfu_file = os.path.join(builder.gateware_dir, f"{soc.platform.name}.dfu")
     shutil.copyfile(output_bitstream, dfu_file)
