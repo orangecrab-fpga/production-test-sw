@@ -12,7 +12,7 @@ from time import sleep
 while True:
     ports = list(serial.tools.list_ports.comports())
     for p in ports:
-        if "OrangeCrab ACM" in p.description:
+        if "OrangeCrab ACM" or "OrangeCrab CDC" in p.description:
             print(f"--- Found {p.description} [{p.vid:04x}:{p.pid:04x} - Serial:{p.serial_number}] ---")
             
             # Connect and output feed

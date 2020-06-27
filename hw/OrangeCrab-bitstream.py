@@ -3,6 +3,18 @@
 # This file is Copyright (c) Greg Davill <greg.davill@gmail.com>
 # License: BSD
 
+
+# This variable defines all the external programs that this module
+# relies on.  lxbuildenv reads this variable in order to ensure
+# the build will finish without exiting due to missing third-party
+# programs.
+LX_DEPENDENCIES = ["riscv", "nextpnr-ecp5", "yosys"]
+
+# Import lxbuildenv to integrate the deps/ directory
+import lxbuildenv
+
+
+
 import sys
 import os
 import shutil
@@ -27,6 +39,7 @@ from litex.soc.integration.builder import *
 from litedram.modules import MT41K64M16, MT41K128M16, MT41K256M16
 from litedram.phy import ECP5DDRPHY
 
+import valentyusb
 
 from rtl.rgb import RGB
 from litex.soc.cores import spi_flash
@@ -76,8 +89,6 @@ class BaseSoC(SoCCore):
         self.comb += platform.request("rst_n").eq(1)
 
         # USB hardware Abstract Control Model.
-        os.system("git clone https://github.com/gregdavill/valentyusb -b hw_cdc_eptri")
-        sys.path.append("valentyusb")
         kwargs['uart_name']="usb_acm"
 
 
