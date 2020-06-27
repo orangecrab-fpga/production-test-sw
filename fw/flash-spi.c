@@ -82,15 +82,13 @@ void spi_read_uuid(uint8_t* uuid) {
         bit ID is shifted out on the falling edge of CLK
     */
 
-    bb_spi_en(1);
-    bb_spi_begin();
+    spiBegin();
     spi_single_tx(0x4B);
     for(int dummy = 0; dummy < 4; dummy++)
         spi_single_rx();
     for(int i = 0; i < 8; i++)
         *uuid++ = spi_single_rx();
-    bb_spi_end();
-    bb_spi_en(0);
+    spiEnd();
 }
 
 __attribute__((used))
@@ -102,15 +100,15 @@ uint32_t spiId(uint8_t* data) {
 	spi_single_tx(0x00);               // Dummy byte 1
 	spi_single_tx(0x00);               // Dummy byte 2
 	spi_single_tx(0x00);               // Dummy byte 3
-	*ptr++ = (spi_id << 8) | spi_single_rx();  // Manufacturer ID
-	*ptr++ = (spi_id << 8) | spi_single_rx();  // Device ID
+	*ptr++ = spi_single_rx();  // Manufacturer ID
+	*ptr++ = spi_single_rx();  // Device ID
 	spiEnd();
 
 	spiBegin();
 	spi_single_tx(0x9f);               // Read device id
 	*ptr++ = spi_single_rx();             // Manufacturer ID (again)
-	*ptr++ = (spi_id << 8) | spi_single_rx();  // Memory Type
-	*ptr++ = (spi_id << 8) | spi_single_rx();  // Memory Size
+	*ptr++ = spi_single_rx();  // Memory Type
+	*ptr++ = spi_single_rx();  // Memory Size
 	spiEnd();
 
 	return ptr - data;

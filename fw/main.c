@@ -18,8 +18,8 @@
 
 
 void print_buffer(uint8_t* ptr, uint8_t len){
-	for(int i = 0; i < len){
-		printf("%s\"0x%02x\"",i > 0 ? "," : 0, buf[i]);
+	for(int i = 0; i < len; i++){
+		printf("%s\"0x%02x\"",i > 0 ? "," : 0, ptr[i]);
 	}
 }
 
