@@ -80,29 +80,30 @@ class CRG(Module):
 
         self.stop = Signal()
 
+        
+        # Use OSCG for generating por clocks.
         osc_g = Signal()
-
         self.specials += Instance("OSCG",
             p_DIV=6, # 31MHz
             o_OSC=osc_g
         )
 
-        # Clk / Rst
+        # Clk
         clk48 = platform.request("clk48")
-
-        # Power on reset
-        por_count = Signal(24, reset=int(31e6 * 10e-3))
         por_done  = Signal()
+
+        # Power on reset 10ms.
+        por_count = Signal(24, reset=0)
         self.comb += self.cd_por.clk.eq(osc_g)
-        self.comb += por_done.eq(por_count == 0)
-        self.sync.por += If(~por_done, por_count.eq(por_count - 1))
+        self.comb += por_done.eq(por_count == int(31e6 * 500e-3))
+        self.sync.por += If(~por_done, por_count.eq(por_count + 1))
 
         # PLL
         sys2x_clk_ecsout = Signal()
         self.submodules.pll = pll = ECP5PLL()
         pll.register_clkin(clk48, 48e6)
         pll.create_clkout(self.cd_sys2x_i, 2*sys_clk_freq)
-        pll.create_clkout(self.cd_init, 24e6)
+        pll.create_clkout(self.cd_init, 12e6)
         self.specials += [
             Instance("ECLKBRIDGECS",
                 i_CLK0   = self.cd_sys2x_i.clk,
@@ -131,6 +132,10 @@ class CRG(Module):
             usb_pll.register_clkin(clk48, 48e6)
             usb_pll.create_clkout(self.cd_usb_48, 48e6)
             usb_pll.create_clkout(self.cd_usb_12, 12e6)
+            self.specials += [
+                AsyncResetSynchronizer(self.cd_usb_48,  ~por_done | ~usb_pll.locked),
+                AsyncResetSynchronizer(self.cd_usb_12,  ~por_done | ~usb_pll.locked)
+            ]
 
 
 
@@ -251,10 +256,6 @@ class BaseSoC(SoCCore):
 
         src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fw"))
         builder.add_software_package("fw", src_dir)
-
-        # Remove litedram package, not currently compatible
-        builder.software_packages = [(n,p) for (n,p) in builder.software_packages if n != "liblitedram"]
-
 
         builder._prepare_rom_software()
         builder._generate_includes()

@@ -13,8 +13,6 @@
 #include <irq.h>
 #include <uart.h>
 
-#include <sdram.h>
-
 #include <sleep.h>
 #include <flash-spi.h>
 

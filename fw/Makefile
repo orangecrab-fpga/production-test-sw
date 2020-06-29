@@ -11,7 +11,6 @@ CFLAGS += -I$(FW_DIRECTORY)/include
 OBJECTS = isr.o			\
 		sleep.o         \
 		flash-spi.o     \
-		sdram.o		    \
 	    main.o
 
 
@@ -32,15 +31,17 @@ endif
 oc-fw.elf: ../libbase/crt0.o \
 	../libcompiler_rt/libcompiler_rt.a \
 	../libbase/libbase-nofloat.a \
+	../liblitedram/liblitedram.a \
 	../liblitespi/liblitespi.a \
 	$(OBJECTS)
 	$(LD) $(LDFLAGS) -L$(BUILDINC_DIRECTORY)/generated -T $(FW_DIRECTORY)/linker.ld -N -o $@ \
 		../libbase/crt0.o \
 		$(OBJECTS) \
 		-L../libcompiler_rt \
+		-L../liblitedram \
 		-L../libbase \
 		-L../liblitespi \
-		-lcompiler_rt -llitespi -lbase-nofloat 
+		-lcompiler_rt -llitedram -llitespi -lbase-nofloat 
 		
 ifneq ($(OS),Windows_NT)
 	chmod -x $@
