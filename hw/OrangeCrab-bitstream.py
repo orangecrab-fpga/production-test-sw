@@ -27,9 +27,11 @@ from migen import *
 from migen.genlib.resetsync import AsyncResetSynchronizer
 
 from litex_boards.platforms import orangecrab
-from litex_boards.targets.orangecrab import _CRG
+#from litex_boards.targets.orangecrab import _CRG
 
 from litex.build.lattice.trellis import trellis_args, trellis_argdict
+
+from litex.build.generic_platform import IOStandard, Subsignal, Pins, Misc
 
 from litex.soc.cores.clock import *
 from litex.soc.integration.soc_core import *
@@ -43,6 +45,94 @@ import valentyusb
 
 from rtl.rgb import RGB
 from litex.soc.cores import spi_flash
+from litex.soc.cores.gpio import GPIOTristate, GPIOOut
+
+# Small hack to add Pull-up to the RGB-LED I/O pins, for detecting shorts
+rgb_led_io = [
+    ("rgb_led_io", 0,
+        Subsignal("r", Pins("K4"), IOStandard("LVCMOS33"), Misc("PULLMODE=UP")),
+        Subsignal("g", Pins("M3"), IOStandard("LVCMOS33"), Misc("PULLMODE=UP")),
+        Subsignal("b", Pins("J3"), IOStandard("LVCMOS33"), Misc("PULLMODE=UP")),
+    )
+]
+
+# connect all remaninig GPIO pins out
+user_io = [
+    ("gpio", 0, Pins("GPIO:0 GPIO:1 GPIO:5 GPIO:6 GPIO:9 GPIO:10 GPIO:11 GPIO:12 GPIO:13  GPIO:18 GPIO:19 GPIO:20 GPIO:21"), 
+        IOStandard("LVCMOS33"), Misc("PULLMODE=DOWN"))
+]
+
+
+
+# CRG ---------------------------------------------------------------------------------------------
+
+class CRG(Module):
+    def __init__(self, platform, sys_clk_freq, with_usb_pll=False):
+        self.clock_domains.cd_init     = ClockDomain()
+        self.clock_domains.cd_por      = ClockDomain(reset_less=True)
+        self.clock_domains.cd_sys      = ClockDomain()
+        self.clock_domains.cd_sys2x    = ClockDomain()
+        self.clock_domains.cd_sys2x_i  = ClockDomain(reset_less=True)
+        self.clock_domains.cd_sys2x_eb = ClockDomain(reset_less=True)
+
+
+        # # #
+
+        self.stop = Signal()
+
+        osc_g = Signal()
+
+        self.specials += Instance("OSCG",
+            p_DIV=6, # 31MHz
+            o_OSC=osc_g
+        )
+
+        # Clk / Rst
+        clk48 = platform.request("clk48")
+
+        # Power on reset
+        por_count = Signal(24, reset=int(31e6 * 10e-3))
+        por_done  = Signal()
+        self.comb += self.cd_por.clk.eq(osc_g)
+        self.comb += por_done.eq(por_count == 0)
+        self.sync.por += If(~por_done, por_count.eq(por_count - 1))
+
+        # PLL
+        sys2x_clk_ecsout = Signal()
+        self.submodules.pll = pll = ECP5PLL()
+        pll.register_clkin(clk48, 48e6)
+        pll.create_clkout(self.cd_sys2x_i, 2*sys_clk_freq)
+        pll.create_clkout(self.cd_init, 24e6)
+        self.specials += [
+            Instance("ECLKBRIDGECS",
+                i_CLK0   = self.cd_sys2x_i.clk,
+                i_SEL    = 0,
+                o_ECSOUT = sys2x_clk_ecsout),
+            Instance("ECLKSYNCB",
+                i_ECLKI = sys2x_clk_ecsout,
+                i_STOP  = self.stop,
+                o_ECLKO = self.cd_sys2x.clk),
+            Instance("CLKDIVF",
+                p_DIV     = "2.0",
+                i_ALIGNWD = 0,
+                i_CLKI    = self.cd_sys2x.clk,
+                i_RST     = self.cd_sys2x.rst,
+                o_CDIVX   = self.cd_sys.clk),
+            AsyncResetSynchronizer(self.cd_init, ~por_done | ~pll.locked),
+            AsyncResetSynchronizer(self.cd_sys,  ~por_done | ~pll.locked)
+        ]
+
+        # USB PLL
+        if with_usb_pll:
+            self.clock_domains.cd_usb_12 = ClockDomain()
+            self.clock_domains.cd_usb_48 = ClockDomain()
+            usb_pll = ECP5PLL()
+            self.submodules += usb_pll
+            usb_pll.register_clkin(clk48, 48e6)
+            usb_pll.create_clkout(self.cd_usb_48, 48e6)
+            usb_pll.create_clkout(self.cd_usb_12, 12e6)
+
+
 
 # BaseSoC ------------------------------------------------------------------------------------------
 
@@ -53,7 +143,9 @@ class BaseSoC(SoCCore):
         "identifier_mem": 4,  # provided by default (optional)
         "timer0":         5,  # provided by default (optional)
         "usb":            9,
-        "rgb":            13,
+        "gpio_led":       10,
+        "gpio":           11,
+        "self_reset":     12,
         "version":        14,
         "lxspi":          15,
         "button":         17,
@@ -85,18 +177,15 @@ class BaseSoC(SoCCore):
         # Serial -----------------------------------------------------------------------------------
         #platform.add_extension(orangecrab.feather_serial)
 
-        # Self Reset
-        self.comb += platform.request("rst_n").eq(1)
 
         # USB hardware Abstract Control Model.
         kwargs['uart_name']="usb_acm"
-
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, csr_data_width=32, **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
-        self.submodules.crg = _CRG(platform, sys_clk_freq, with_usb_pll=True)
+        self.submodules.crg = CRG(platform, sys_clk_freq, with_usb_pll=True)
 
         # DDR3 SDRAM -------------------------------------------------------------------------------
         #if 0:
@@ -104,14 +193,14 @@ class BaseSoC(SoCCore):
             available_sdram_modules = {
                 'MT41K64M16': MT41K64M16,
                 'MT41K128M16': MT41K128M16,
-                'MT41K256M16': MT41K256M16,
-#                'MT41K512M16': MT41K512M16 # Todo push definition for this part
+                'MT41K256M16': MT41K256M16
             }
             sdram_module = available_sdram_modules.get(
                 kwargs.get("sdram_device", "MT41K64M16"))
 
+            ddr_pads = platform.request("ddram")
             self.submodules.ddrphy = ECP5DDRPHY(
-                platform.request("ddram"),
+                ddr_pads,
                 sys_clk_freq=sys_clk_freq)
             self.add_csr("ddrphy")
             self.add_constant("ECP5DDRPHY")
@@ -126,9 +215,26 @@ class BaseSoC(SoCCore):
                 l2_cache_reverse        = True
             )
 
+            self.comb += ddr_pads.vccio.eq(1)
+            self.comb += ddr_pads.gnd.eq(0)
+
         # RGB LED
-        led = platform.request("rgb_led", 0)
-        self.submodules.rgb = RGB(led)
+        platform.add_extension(rgb_led_io)
+        platform.add_extension(user_io)
+        led = platform.request("rgb_led_io", 0)
+
+        self.submodules.gpio_led = GPIOTristate(Cat(led.r,led.g,led.b))
+        self.submodules.gpio = GPIOTristate(platform.request("gpio", 0))
+
+
+    
+        # Self Reset
+        reset_code = Signal(32, reset=0)
+        self.submodules.self_reset = GPIOOut(reset_code)
+        self.comb += platform.request("rst_n").eq(reset_code != 0xAA550001)
+        
+
+        
 
         # The litex SPI module supports memory-mapped reads, as well as a bit-banged mode
         # for doing writes.
@@ -145,6 +251,10 @@ class BaseSoC(SoCCore):
 
         src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fw"))
         builder.add_software_package("fw", src_dir)
+
+        # Remove litedram package, not currently compatible
+        builder.software_packages = [(n,p) for (n,p) in builder.software_packages if n != "liblitedram"]
+
 
         builder._prepare_rom_software()
         builder._generate_includes()
@@ -192,6 +302,7 @@ def main():
     builder = Builder(soc, **builder_argdict(args))
     
 
+
     # Build firmware
     soc.PackageFirmware(builder)
         
@@ -203,12 +314,9 @@ def main():
     
     rand_rom = os.path.join(builder.output_dir, "gateware", "rand.data")
 
-    input_config = os.path.join(builder.output_dir, "gateware", f"{soc.platform.name}.config")
-    output_config = os.path.join(builder.output_dir, "gateware", f"{soc.platform.name}_patched.config")
-    
     
 
-     # If we don't have a random file, create one, and recompile gateware
+    # If we don't have a random file, create one, and recompile gateware
     if (os.path.exists(rand_rom) == False) or (args.update_firmware == False):
         os.makedirs(os.path.join(builder.output_dir,'gateware'), exist_ok=True)
         os.makedirs(os.path.join(builder.output_dir,'software'), exist_ok=True)
@@ -225,22 +333,23 @@ def main():
         # Build gateware
         builder_kargs = trellis_argdict(args) if args.toolchain == "trellis" else {}
         vns = builder.build(**builder_kargs)
-        soc.do_exit(vns)    
+        soc.do_exit(vns)   
+
+    input_config = os.path.join(builder.output_dir, "gateware", f"{soc.platform.name}.config")
+    output_config = os.path.join(builder.output_dir, "gateware", f"{soc.platform.name}_patched.config")
 
     # Insert Firmware into Gateware
     os.system(f"ecpbram  --input {input_config} --output {output_config} --from {rand_rom} --to {firmware_init}")
 
+
     # create compressed config (ECP5 specific)
     output_bitstream = os.path.join(builder.gateware_dir, f"{soc.platform.name}.bit")
-    os.system(f"ecppack --freq 38.8 --compress --input {output_config} --bit {output_bitstream}")
+    os.system(f"ecppack --freq 38.8 --spimode qspi --compress --input {output_config} --bit {output_bitstream}")
 
     dfu_file = os.path.join(builder.gateware_dir, f"{soc.platform.name}.dfu")
     shutil.copyfile(output_bitstream, dfu_file)
     os.system(f"dfu-suffix -v 1209 -p 5bf0 -a {dfu_file}")
 
-    print(firmware_init)
-    print(output_config)
-    print(dfu_file)
 
 def argdict(args):
     r = soc_sdram_argdict(args)

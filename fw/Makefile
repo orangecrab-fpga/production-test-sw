@@ -11,6 +11,7 @@ CFLAGS += -I$(FW_DIRECTORY)/include
 OBJECTS = isr.o			\
 		sleep.o         \
 		flash-spi.o     \
+		sdram.o		    \
 	    main.o
 
 
@@ -28,23 +29,19 @@ else
 	$(PYTHON) -m litex.soc.software.mkmscimg $@
 endif
 
-oc-fw.elf: ../libbase/crt0-ctr.o \
+oc-fw.elf: ../libbase/crt0.o \
 	../libcompiler_rt/libcompiler_rt.a \
 	../libbase/libbase-nofloat.a \
-	../liblitedram/liblitedram.a \
 	../liblitespi/liblitespi.a \
 	$(OBJECTS)
 	$(LD) $(LDFLAGS) -L$(BUILDINC_DIRECTORY)/generated -T $(FW_DIRECTORY)/linker.ld -N -o $@ \
-		../libbase/crt0-ctr.o \
+		../libbase/crt0.o \
 		$(OBJECTS) \
 		-L../libcompiler_rt \
 		-L../libbase \
-		-L../liblitedram \
 		-L../liblitespi \
-		$(BP_LIBS) \
-		-lcompiler_rt -llitedram -llitespi -lbase-nofloat \
-		$(BP_FLAGS)
-
+		-lcompiler_rt -llitespi -lbase-nofloat 
+		
 ifneq ($(OS),Windows_NT)
 	chmod -x $@
 endif
