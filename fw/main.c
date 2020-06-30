@@ -45,9 +45,15 @@ int main(int i, char **c)
 	/* Init Memory */
 	int sdr_ok = sdrinit();
 	
+	/* Confirm we got a lock on the DDRDLL */
+
+ 	//printf("Lock:%u delay: %u\n", ddrphy_ddrdlla_lock_read(), ddrphy_ddrdlla_dcntl_read());
+
 	while(!sdr_ok){
 
 	}
+
+	msleep(40);
 
 	self_reset_out_write(0xAA550001);
 

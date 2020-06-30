@@ -72,19 +72,19 @@ class CRG(Module):
         self.clock_domains.cd_por      = ClockDomain(reset_less=True)
         self.clock_domains.cd_sys      = ClockDomain()
         self.clock_domains.cd_sys2x    = ClockDomain()
-        self.clock_domains.cd_sys2x_i  = ClockDomain(reset_less=True)
-        self.clock_domains.cd_sys2x_eb = ClockDomain(reset_less=True)
+        self.clock_domains.cd_sys2x_i  = ClockDomain()
 
 
         # # #
 
         self.stop = Signal()
+        self.reset = Signal()
 
         
         # Use OSCG for generating por clocks.
         osc_g = Signal()
         self.specials += Instance("OSCG",
-            p_DIV=6, # 31MHz
+            p_DIV=6, # 38MHz
             o_OSC=osc_g
         )
 
@@ -93,17 +93,17 @@ class CRG(Module):
         por_done  = Signal()
 
         # Power on reset 10ms.
-        por_count = Signal(24, reset=0)
-        self.comb += self.cd_por.clk.eq(osc_g)
-        self.comb += por_done.eq(por_count == int(31e6 * 500e-3))
-        self.sync.por += If(~por_done, por_count.eq(por_count + 1))
+        por_count = Signal(24, reset=int(48e6 * 50e-3))
+        self.comb += self.cd_por.clk.eq(clk48)
+        self.comb += por_done.eq(por_count == 0)
+        self.sync.por += If(~por_done, por_count.eq(por_count - 1))
 
         # PLL
         sys2x_clk_ecsout = Signal()
         self.submodules.pll = pll = ECP5PLL()
         pll.register_clkin(clk48, 48e6)
         pll.create_clkout(self.cd_sys2x_i, 2*sys_clk_freq)
-        pll.create_clkout(self.cd_init, 12e6)
+        pll.create_clkout(self.cd_init, 24e6)
         self.specials += [
             Instance("ECLKBRIDGECS",
                 i_CLK0   = self.cd_sys2x_i.clk,
@@ -117,10 +117,12 @@ class CRG(Module):
                 p_DIV     = "2.0",
                 i_ALIGNWD = 0,
                 i_CLKI    = self.cd_sys2x.clk,
-                i_RST     = self.cd_sys2x.rst,
+                i_RST     = self.reset,
                 o_CDIVX   = self.cd_sys.clk),
-            AsyncResetSynchronizer(self.cd_init, ~por_done | ~pll.locked),
-            AsyncResetSynchronizer(self.cd_sys,  ~por_done | ~pll.locked)
+            AsyncResetSynchronizer(self.cd_init,  ~por_done | ~pll.locked),
+            AsyncResetSynchronizer(self.cd_sys,   ~por_done | ~pll.locked | self.reset),
+            AsyncResetSynchronizer(self.cd_sys2x, ~por_done | ~pll.locked | self.reset),
+            AsyncResetSynchronizer(self.cd_sys2x_i, ~por_done | ~pll.locked | self.reset),
         ]
 
         # USB PLL
@@ -190,7 +192,7 @@ class BaseSoC(SoCCore):
         SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, csr_data_width=32, **kwargs)
 
         # CRG --------------------------------------------------------------------------------------
-        self.submodules.crg = CRG(platform, sys_clk_freq, with_usb_pll=True)
+        self.submodules.crg = crg = CRG(platform, sys_clk_freq, with_usb_pll=True)
 
         # DDR3 SDRAM -------------------------------------------------------------------------------
         #if 0:
@@ -209,7 +211,8 @@ class BaseSoC(SoCCore):
                 sys_clk_freq=sys_clk_freq)
             self.add_csr("ddrphy")
             self.add_constant("ECP5DDRPHY")
-            self.comb += self.crg.stop.eq(self.ddrphy.init.stop)
+            self.comb += crg.stop.eq(self.ddrphy.init.stop)
+            self.comb += crg.reset.eq(self.ddrphy.init.reset)
             self.add_sdram("sdram",
                 phy                     = self.ddrphy,
                 module                  = sdram_module(sys_clk_freq, "1:2"),
@@ -345,7 +348,8 @@ def main():
 
     # create compressed config (ECP5 specific)
     output_bitstream = os.path.join(builder.gateware_dir, f"{soc.platform.name}.bit")
-    os.system(f"ecppack --freq 38.8 --spimode qspi --compress --input {output_config} --bit {output_bitstream}")
+    #os.system(f"ecppack --freq 38.8 --spimode qspi --compress --input {output_config} --bit {output_bitstream}")
+    os.system(f"ecppack --freq 38.8 --compress --input {output_config} --bit {output_bitstream}")
 
     dfu_file = os.path.join(builder.gateware_dir, f"{soc.platform.name}.dfu")
     shutil.copyfile(output_bitstream, dfu_file)
