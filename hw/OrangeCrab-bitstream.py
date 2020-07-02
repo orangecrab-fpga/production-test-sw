@@ -41,6 +41,9 @@ from litex.soc.integration.builder import *
 from litedram.modules import MT41K64M16, MT41K128M16, MT41K256M16
 from litedram.phy import ECP5DDRPHY
 
+from litex.soc.cores.spi import SPIMaster
+from litex.soc.cores.bitbang import I2CMaster
+
 import valentyusb
 
 from rtl.rgb import RGB
@@ -57,11 +60,19 @@ rgb_led_io = [
 ]
 
 # connect all remaninig GPIO pins out
-user_io = [
+extras = [
     ("gpio", 0, Pins("GPIO:0 GPIO:1 GPIO:5 GPIO:6 GPIO:9 GPIO:10 GPIO:11 GPIO:12 GPIO:13  GPIO:18 GPIO:19 GPIO:20 GPIO:21"), 
-        IOStandard("LVCMOS33"), Misc("PULLMODE=DOWN"))
+        IOStandard("LVCMOS33"), Misc("PULLMODE=DOWN")),
+    ("i2c", 0,
+        Subsignal("sda", Pins("GPIO:2"), IOStandard("LVCMOS33")),
+        Subsignal("scl", Pins("GPIO:3"), IOStandard("LVCMOS33"))
+    ),
+    ("spi",0,
+        Subsignal("miso", Pins("GPIO:14"), IOStandard("LVCMOS33")),
+        Subsignal("mosi", Pins("GPIO:16"), IOStandard("LVCMOS33")),
+        Subsignal("clk",  Pins("GPIO:15"), IOStandard("LVCMOS33"))
+    )
 ]
-
 
 
 # CRG ---------------------------------------------------------------------------------------------
@@ -156,6 +167,8 @@ class BaseSoC(SoCCore):
         "version":        14,
         "lxspi":          15,
         "button":         17,
+        "spi":            18,
+        "i2c":            19,
     }
     csr_map.update(SoCCore.csr_map)
 
@@ -226,17 +239,24 @@ class BaseSoC(SoCCore):
             self.comb += ddr_pads.vccio.eq(1)
             self.comb += ddr_pads.gnd.eq(0)
 
+        # Add extra pin definitions
+        platform.add_extension(extras)
+
         # RGB LED
         platform.add_extension(rgb_led_io)
-        platform.add_extension(user_io)
         led = platform.request("rgb_led_io", 0)
 
         self.submodules.gpio_led = GPIOTristate(Cat(led.r,led.g,led.b))
         self.submodules.gpio = GPIOTristate(platform.request("gpio", 0))
 
+        # SPI
+        self.submodules.spi = SPIMaster(platform.request("spi"), 8, sys_clk_freq, int(4e6))
+
+        # i2c
+        self.submodules.i2c = I2CMaster(platform.request("i2c"))
 
     
-        # Self Reset
+        # Controllable Self Reset
         reset_code = Signal(32, reset=0)
         self.submodules.self_reset = GPIOOut(reset_code)
         self.comb += platform.request("rst_n").eq(reset_code != 0xAA550001)
