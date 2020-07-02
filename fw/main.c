@@ -13,6 +13,8 @@
 #include <irq.h>
 #include <uart.h>
 
+#include <i2c.h>
+
 #include <sleep.h>
 #include <flash-spi.h>
 
@@ -21,6 +23,12 @@ void print_buffer(uint8_t* ptr, uint8_t len){
 	for(int i = 0; i < len; i++){
 		printf("%s0x%02x\"",i > 0 ? ",\"" : "\"", ptr[i]);
 	}
+}
+
+void test_fail(const char* str){
+	printf("Test Fail %s :(\n", str);
+
+	while(1);
 }
 
 int main(int i, char **c)
@@ -44,18 +52,11 @@ int main(int i, char **c)
 
 	/* Init Memory */
 	int sdr_ok = sdrinit();
-	
-	/* Confirm we got a lock on the DDRDLL */
-
- 	//printf("Lock:%u delay: %u\n", ddrphy_ddrdlla_lock_read(), ddrphy_ddrdlla_dcntl_read());
-
-	while(!sdr_ok){
-
+	if(sdr_ok == 0){
+		test_fail("DDR3 Init failure");
 	}
 
-	msleep(40);
-
-	self_reset_out_write(0xAA550001);
+	//self_reset_out_write(0xAA550001);
 
 	/* Check for SPI FLASH */	
 	spiInit();
@@ -71,6 +72,26 @@ int main(int i, char **c)
 	printf("{\"spi uuid\":[");
 	print_buffer(buf, 8);
 	printf("]}\n");
+
+	/* Configure I2C, read ID code from DAC */
+	i2c_reset();
+
+	char data[2] = {0x00, 0b00001010};
+	bool ret = i2c_write(0b1001000, 2, data, 2);
+	printf("Write i2c: Reset. %u\n", ret);
+
+	/* Wait for it to reset */
+	msleep(10);
+
+	data[0] = 0;
+	data[1] = 0;
+	ret = i2c_read(0b1001000, 2, data, 2, true);
+	printf("Read i2c: 0x%02x%02x %d\n", data[0], data[1], ret);
+
+	if(((data[0] << 2 | data[1] >> 6) & 0b111111) == 0b001100){
+		printf("Correct ID for DAC53608 (0b001100)\n");
+	}
+
 
 
 	/* Test of LED GPIO */
@@ -89,29 +110,11 @@ int main(int i, char **c)
 		
 	}
 
-	/* Quick test of GPIO */
-	for(int i = 0; i < 13; i++){
-		uint32_t out_pattern = 1 << i;
-		gpio_out_write(0xFFFFFFFF);
-		gpio_oe_write(out_pattern);
+	/*  */
 
-		msleep(1);
 
-		uint32_t read_pattern = gpio_in_read();
 
-		/* Print values */
-		printf("LOW{%04X:%04X}\n",out_pattern, read_pattern);
-		
-		gpio_out_write(0);
-
-		msleep(1);
-
-		read_pattern = gpio_in_read();
-
-		/* Print values */
-		printf("HIGH{%04X:%04X}\n",out_pattern, read_pattern);
-		
-	}
+	
 
 
 	return 0;

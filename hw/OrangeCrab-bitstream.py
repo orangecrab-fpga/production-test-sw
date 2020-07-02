@@ -44,6 +44,11 @@ from litedram.phy import ECP5DDRPHY
 from litex.soc.cores.spi import SPIMaster
 from litex.soc.cores.bitbang import I2CMaster
 
+from litex.soc.doc import generate_docs
+
+
+from migen.genlib.cdc import MultiReg
+
 import valentyusb
 
 from rtl.rgb import RGB
@@ -61,7 +66,7 @@ rgb_led_io = [
 
 # connect all remaninig GPIO pins out
 extras = [
-    ("gpio", 0, Pins("GPIO:0 GPIO:1 GPIO:5 GPIO:6 GPIO:9 GPIO:10 GPIO:11 GPIO:12 GPIO:13  GPIO:18 GPIO:19 GPIO:20 GPIO:21"), 
+    ("gpio", 0, Pins("GPIO:6 GPIO:9 GPIO:10 GPIO:11 GPIO:12 GPIO:13  GPIO:18 GPIO:19 GPIO:20 GPIO:21"), 
         IOStandard("LVCMOS33"), Misc("PULLMODE=DOWN")),
     ("i2c", 0,
         Subsignal("sda", Pins("GPIO:2"), IOStandard("LVCMOS33")),
@@ -70,10 +75,48 @@ extras = [
     ("spi",0,
         Subsignal("miso", Pins("GPIO:14"), IOStandard("LVCMOS33")),
         Subsignal("mosi", Pins("GPIO:16"), IOStandard("LVCMOS33")),
-        Subsignal("clk",  Pins("GPIO:15"), IOStandard("LVCMOS33"))
-    )
+        Subsignal("clk",  Pins("GPIO:15"), IOStandard("LVCMOS33")),
+        Subsignal("cs_n", Pins("GPIO:0"), IOStandard("LVCMOS33"))
+    ),
+    ("ldac", 0, Pins("GPIO:1"), IOStandard("LVCMOS33")),
+    ("clrdac", 0, Pins("GPIO:5"), IOStandard("LVCMOS33"))
 ]
 
+
+class GPIOTristateCustom(Module, AutoCSR):
+    def __init__(self, pads):
+        nbits     = len(pads)
+        fields=[
+                CSRField(str("io6"), 1, 6  ,description="Control for I/O pin 6"),
+                CSRField(str("io9"), 1, 9  ,description="Control for I/O pin 9"),
+                CSRField(str("io10"), 1, 10,description="Control for I/O pin 10"),
+                CSRField(str("io11"), 1, 11,description="Control for I/O pin 11"),
+                CSRField(str("io12"), 1, 12,description="Control for I/O pin 12"),
+                CSRField(str("io13"), 1, 13,description="Control for I/O pin 13"),
+                CSRField(str("io18"), 1, 18,description="Control for I/O pin 18"),
+                CSRField(str("io19"), 1, 19,description="Control for I/O pin 19"),
+                CSRField(str("io20"), 1, 20,description="Control for I/O pin 10"),
+                CSRField(str("io21"), 1, 21,description="Control for I/O pin 21"),
+            ]
+
+        self._oe  = CSRStorage(nbits, description="""GPIO Tristate(s) Control.
+        Write ``1`` enable output driver""", fields=fields)
+        self._in  = CSRStatus(nbits,  description="""GPIO Input(s) Status.
+        Input value of IO pad as read by the FPGA""", fields=fields)
+        self._out = CSRStorage(nbits, description="""GPIO Ouptut(s) Control.
+        Value loaded into the output driver""", fields=fields)
+
+        # # #
+
+        _pads = Signal(nbits)
+        self.comb += _pads.eq(pads)
+
+        for i,f in enumerate(fields):
+            t = TSTriple()
+            self.specials += t.get_tristate(_pads[i])
+            self.comb += t.oe.eq(self._oe.storage[f.offset])
+            self.comb += t.o.eq(self._out.storage[f.offset])
+            self.specials += MultiReg(t.i, self._in.status[f.offset])
 
 # CRG ---------------------------------------------------------------------------------------------
 
@@ -160,7 +203,7 @@ class BaseSoC(SoCCore):
         "crg":            1,  # user
         "identifier_mem": 4,  # provided by default (optional)
         "timer0":         5,  # provided by default (optional)
-        "usb":            9,
+       
         "gpio_led":       10,
         "gpio":           11,
         "self_reset":     12,
@@ -247,7 +290,7 @@ class BaseSoC(SoCCore):
         led = platform.request("rgb_led_io", 0)
 
         self.submodules.gpio_led = GPIOTristate(Cat(led.r,led.g,led.b))
-        self.submodules.gpio = GPIOTristate(platform.request("gpio", 0))
+        self.submodules.gpio = GPIOTristateCustom(platform.request("gpio", 0))
 
         # SPI
         self.submodules.spi = SPIMaster(platform.request("spi"), 8, sys_clk_freq, int(4e6))
@@ -270,6 +313,8 @@ class BaseSoC(SoCCore):
         self.submodules.lxspi = spi_flash.SpiFlashDualQuad(spi_pads, dummy=6, endianness="little")
         self.lxspi.add_clk_primitive(platform.device)
         self.register_mem("spiflash", self.mem_map["spiflash"], self.lxspi.bus, size=16*1024*1024)
+
+
 
     # This function will build our software and create a oc-fw.init file that can be patched directly into blockram in the FPGA
     def PackageFirmware(self, builder):  
@@ -329,6 +374,7 @@ def main():
 
     # Build firmware
     soc.PackageFirmware(builder)
+    #generate_docs(soc, "build/documentation/", project_name="OrangeCrab Test SoC", author="Greg Davill")
         
     # Check if we have the correct files
     firmware_file = os.path.join(builder.output_dir, "software", "fw", "oc-fw.bin")
@@ -358,6 +404,7 @@ def main():
         builder_kargs = trellis_argdict(args) if args.toolchain == "trellis" else {}
         vns = builder.build(**builder_kargs)
         soc.do_exit(vns)   
+    
 
     input_config = os.path.join(builder.output_dir, "gateware", f"{soc.platform.name}.config")
     output_config = os.path.join(builder.output_dir, "gateware", f"{soc.platform.name}_patched.config")
