@@ -78,6 +78,13 @@ int main(int i, char **c)
 	dac_reset();
 	dac_read_id();
 
+	/* Release I/O control over DAC */
+	gpio_out_write(1 << CSR_GPIO_OUT_DAC_CLR_OFFSET);
+	gpio_out_write(1 << CSR_GPIO_OUT_DAC_LDAC_OFFSET);
+
+	gpio_oe_write(1 << CSR_GPIO_OUT_DAC_CLR_OFFSET);
+	gpio_oe_write(1 << CSR_GPIO_OUT_DAC_LDAC_OFFSET);
+
 
 	/* Read/write/read to validate that SPI io expander is present */
 	uint8_t io_data = 0;

@@ -66,7 +66,7 @@ rgb_led_io = [
 
 # connect all remaninig GPIO pins out
 extras = [
-    ("gpio", 0, Pins("GPIO:6 GPIO:9 GPIO:10 GPIO:11 GPIO:12 GPIO:13  GPIO:18 GPIO:19 GPIO:20 GPIO:21"), 
+    ("gpio", 0, Pins("GPIO:1 GPIO:5 GPIO:6 GPIO:9 GPIO:10 GPIO:11 GPIO:12 GPIO:13  GPIO:18 GPIO:19 GPIO:20 GPIO:21"), 
         IOStandard("LVCMOS33"), Misc("PULLMODE=DOWN")),
     ("i2c", 0,
         Subsignal("sda", Pins("GPIO:2"), IOStandard("LVCMOS33")),
@@ -87,6 +87,8 @@ class GPIOTristateCustom(Module, AutoCSR):
     def __init__(self, pads):
         nbits     = len(pads)
         fields=[
+                CSRField(str("dac_ldac"), 1, 0  ,description="Load Dac, Active LOW"),
+                CSRField(str("dac_clr"),  1, 5  ,description="Clear Dac, Actiwe LOW"),
                 CSRField(str("io6"), 1, 6  ,description="Control for I/O pin 6"),
                 CSRField(str("io9"), 1, 9  ,description="Control for I/O pin 9"),
                 CSRField(str("io10"), 1, 10,description="Control for I/O pin 10"),
@@ -117,6 +119,8 @@ class GPIOTristateCustom(Module, AutoCSR):
             self.comb += t.oe.eq(self._oe.storage[f.offset])
             self.comb += t.o.eq(self._out.storage[f.offset])
             self.specials += MultiReg(t.i, self._in.status[f.offset])
+
+
 
 # CRG ---------------------------------------------------------------------------------------------
 
