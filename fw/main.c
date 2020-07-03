@@ -13,7 +13,7 @@
 #include <irq.h>
 #include <uart.h>
 
-#include <i2c.h>
+#include <dac53608.h>
 
 #include <sleep.h>
 #include <flash-spi.h>
@@ -74,23 +74,8 @@ int main(int i, char **c)
 	printf("]}\n");
 
 	/* Configure I2C, read ID code from DAC */
-	i2c_reset();
-
-	char data[2] = {0x00, 0b00001010};
-	bool ret = i2c_write(0b1001000, 2, data, 2);
-	printf("Write i2c: Reset. %u\n", ret);
-
-	/* Wait for it to reset */
-	msleep(10);
-
-	data[0] = 0;
-	data[1] = 0;
-	ret = i2c_read(0b1001000, 2, data, 2, true);
-	printf("Read i2c: 0x%02x%02x %d\n", data[0], data[1], ret);
-
-	if(((data[0] << 2 | data[1] >> 6) & 0b111111) == 0b001100){
-		printf("Correct ID for DAC53608 (0b001100)\n");
-	}
+	dac_reset();
+	dac_read_id();
 
 
 

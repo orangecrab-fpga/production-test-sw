@@ -11,6 +11,7 @@ CFLAGS += -I$(FW_DIRECTORY)/include
 OBJECTS = isr.o			\
 		sleep.o         \
 		flash-spi.o     \
+		dac53608.o      \
 	    main.o
 
 
