@@ -12,6 +12,7 @@ OBJECTS = isr.o			\
 		sleep.o         \
 		flash-spi.o     \
 		dac53608.o      \
+		mcp23s08.o      \
 	    main.o
 
 

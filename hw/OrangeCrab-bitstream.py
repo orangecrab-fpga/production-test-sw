@@ -293,7 +293,7 @@ class BaseSoC(SoCCore):
         self.submodules.gpio = GPIOTristateCustom(platform.request("gpio", 0))
 
         # SPI
-        self.submodules.spi = SPIMaster(platform.request("spi"), 8, sys_clk_freq, int(4e6))
+        self.submodules.spi = SPIMaster(platform.request("spi"), 24, sys_clk_freq, int(4e6))
 
         # i2c
         self.submodules.i2c = I2CMaster(platform.request("i2c"))

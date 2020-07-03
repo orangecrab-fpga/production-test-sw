@@ -14,6 +14,7 @@
 #include <uart.h>
 
 #include <dac53608.h>
+#include <mcp23s08.h>
 
 #include <sleep.h>
 #include <flash-spi.h>
@@ -76,6 +77,20 @@ int main(int i, char **c)
 	/* Configure I2C, read ID code from DAC */
 	dac_reset();
 	dac_read_id();
+
+
+	/* Read/write/read to validate that SPI io expander is present */
+	uint8_t io_data = 0;
+	mcp23s08_read(6, &io_data);
+	printf("Read: %02x - ", io_data);
+
+	io_data ^= 0xAA;
+	mcp23s08_write(6, io_data);
+	printf("Write: %02x - ", io_data);
+	
+	io_data = 0;
+	mcp23s08_read(6, &io_data);
+	printf("Read: %02x\n", io_data);
 
 
 
