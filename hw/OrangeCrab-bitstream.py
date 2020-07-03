@@ -87,7 +87,7 @@ class GPIOTristateCustom(Module, AutoCSR):
     def __init__(self, pads):
         nbits     = len(pads)
         fields=[
-                CSRField(str("dac_ldac"), 1, 0  ,description="Load Dac, Active LOW"),
+                CSRField(str("dac_ldac"), 1, 1  ,description="Load Dac, Active LOW"),
                 CSRField(str("dac_clr"),  1, 5  ,description="Clear Dac, Actiwe LOW"),
                 CSRField(str("io6"), 1, 6  ,description="Control for I/O pin 6"),
                 CSRField(str("io9"), 1, 9  ,description="Control for I/O pin 9"),

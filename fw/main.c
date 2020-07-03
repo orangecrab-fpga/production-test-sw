@@ -33,22 +33,22 @@ void test_fail(const char* str){
 }
 
 int main(int i, char **c)
-{	
+{
 	/* Setup IRQ, needed for UART */
 	irq_setmask(0);
 	irq_setie(1);
 	uart_init();
 
-	
+
 	printf("\n");
 
 	printf("Hello from OrangeCrab! o/ \n");
- 	printf("{\"firmware build date\":\""__DATE__ "\", \"firmware build time\": \"" __TIME__ "\"}\n");
+	printf("{\"firmware build date\":\""__DATE__ "\", \"firmware build time\": \"" __TIME__ "\"}\n");
 
- 	printf("{\"migen sha1\":\""MIGEN_GIT_SHA1"\"}\n");
- 	printf("{\"litex sha1\":\""LITEX_GIT_SHA1"\"}\n");
+	printf("{\"migen sha1\":\""MIGEN_GIT_SHA1"\"}\n");
+	printf("{\"litex sha1\":\""LITEX_GIT_SHA1"\"}\n");
 
-	
+
 	//msleep(100);
 
 	/* Init Memory */
@@ -59,7 +59,7 @@ int main(int i, char **c)
 
 	//self_reset_out_write(0xAA550001);
 
-	/* Check for SPI FLASH */	
+	/* Check for SPI FLASH */
 	spiInit();
 	unsigned char buf[8] = {0};
 	spiId(buf);
@@ -79,27 +79,53 @@ int main(int i, char **c)
 	dac_read_id();
 
 	/* Release I/O control over DAC */
-	gpio_out_write(1 << CSR_GPIO_OUT_DAC_CLR_OFFSET);
-	gpio_out_write(1 << CSR_GPIO_OUT_DAC_LDAC_OFFSET);
-
 	gpio_oe_write(1 << CSR_GPIO_OUT_DAC_CLR_OFFSET);
 	gpio_oe_write(1 << CSR_GPIO_OUT_DAC_LDAC_OFFSET);
 
+	/* ~CLR=1 to avoid forcing DAC clear */
+	gpio_out_write(1 << CSR_GPIO_OUT_DAC_CLR_OFFSET);
+	/* ~LDAC=0 for async output mode */
+	gpio_out_write(0 << CSR_GPIO_OUT_DAC_LDAC_OFFSET);
 
-	/* Read/write/read to validate that SPI io expander is present */
+
+	printf("GPIO test started\n");
+	/*set all MCP GPIOs to output */
 	uint8_t io_data = 0;
-	mcp23s08_read(6, &io_data);
-	printf("Read: %02x - ", io_data);
+	mcp23s08_write(0, io_data);
 
-	io_data ^= 0xAA;
-	mcp23s08_write(6, io_data);
-	printf("Write: %02x - ", io_data);
-	
-	io_data = 0;
-	mcp23s08_read(6, &io_data);
-	printf("Read: %02x\n", io_data);
+	/* walking 1s and 0s on the MCP GPIOs */
+	for(int j = 0; j < 4; j++)
+	{
+		io_data = (j%2) ? 0x3e : 0x01;
 
+		for(int i = 0; i < 6; i++) {
+			mcp23s08_write(0x9, io_data);
+			/* read all FPGA GPIO */
+			uint32_t gpio_synd = gpio_in_read();
 
+			/* munge the appropriate bits together so they match the MCP stuffing */
+			gpio_synd = ((gpio_synd >> 6) & 0x1) | ((gpio_synd >> 8) & 0x3e);
+
+			/* print and check for match */
+			printf("%X : %X \n", io_data, gpio_synd);
+			if (io_data != gpio_synd)
+				test_fail("GPIO Test Failure");
+
+			/* rotate the bits */
+			io_data = (io_data << 1) & 0x3f;
+			if (j%2) io_data |= 1;
+		}
+	}
+	printf("\nGPIO test passed\n");
+
+	/* ramp up counts to DAC outputs */
+	for(int j = 0; j < 0x0fff; j+=0x100) {
+		for(int i = 0; i < 6; i++) {
+			printf("DAC %d = %x\n",i, j);
+			dac_write_channel(i, j);
+		}
+	}
+	printf("\n");
 
 	/* Test of LED GPIO */
 	uint8_t led_gpio_patterns[] = {0x0, 0x1, 0x2, 0x4, 0x7};
@@ -114,15 +140,9 @@ int main(int i, char **c)
 
 		/* Print values */
 		printf("{%01X:%01X}\n",out_pattern, read_pattern);
-		
 	}
 
 	/*  */
-
-
-
-	
-
 
 	return 0;
 }
