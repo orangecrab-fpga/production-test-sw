@@ -133,6 +133,14 @@ int main(int i, char **c)
 	}
 	printf("\nADC test finished\n");
 
+	while(1){
+		for(int j = 0; j < 0x0fff; j+=0x100){
+			dac_write_channel(0, j);
+			/* Perform 3 ADC measurements */
+			adc_read_channel(1);
+		}
+	}
+
 	/* Test of LED GPIO */
 	uint8_t led_gpio_patterns[] = {0x0, 0x1, 0x2, 0x4, 0x7};
 	for(int i = 0; i < sizeof(led_gpio_patterns); i++){

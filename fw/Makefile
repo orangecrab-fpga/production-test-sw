@@ -7,6 +7,7 @@ BP_FLAGS = -lgcc
 endif
 
 CFLAGS += -I$(FW_DIRECTORY)/include
+CFLAGS += -DI2C_FREQ_HZ=400
 
 OBJECTS = isr.o			\
 		sleep.o         \

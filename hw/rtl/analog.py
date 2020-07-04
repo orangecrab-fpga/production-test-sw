@@ -64,21 +64,13 @@ class AnalogSense(Module, AutoCSR, ModuleDoc):
         timer = Signal(18)
         timer_trig = Signal()
 
-        fsm.act("IDLE",      If(self._control.fields.start, NextState("SETUP")     ))
-        fsm.act("SETUP",     If(timer_trig,                 NextState("CHARGE")    ))
-        fsm.act("CHARGE",    If(timer_trig,                 NextState("DISCHARGE") ))
-        fsm.act("DISCHARGE", If(timer_trig,                 NextState("IDLE")      ))
+        fsm.act("IDLE",      If(self._control.fields.start, NextState("SETUP")),   NextValue(timer, 0x18000))   # 680us
+        fsm.act("SETUP",     If(timer_trig,                 NextState("CHARGE"),   NextValue(timer, 0x18000)))  # 680us
+        fsm.act("CHARGE",    If(timer_trig,                 NextState("DISCHARGE"),NextValue(timer, 0x0) ))     # 2.73ms
+        fsm.act("DISCHARGE", If(timer_trig,                 NextState("IDLE"))) 
 
         # Timers
-        self.sync += [
-            If(fsm.ongoing("IDLE"),
-                timer.eq(0x18000)
-            ).Elif(timer_trig,
-                timer.eq(0)
-            ).Else(
-                timer.eq(timer + 1)
-            )
-        ]
+        self.sync += timer.eq(timer + 1)
         self.comb += timer_trig.eq(timer[17])
 
         # Input 
