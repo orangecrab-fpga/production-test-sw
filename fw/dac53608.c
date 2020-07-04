@@ -1,3 +1,5 @@
+// Copyright 2020 Gregory Davill <greg.davill@gmail.com> 
+// Copyright 2020 Michael Welling <mwelling@ieee.org>
 #include <dac53608.h>
 #include <i2c.h>
 

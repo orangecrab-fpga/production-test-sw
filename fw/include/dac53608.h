@@ -1,3 +1,5 @@
+// Copyright 2020 Gregory Davill <greg.davill@gmail.com> 
+// Copyright 2020 Michael Welling <mwelling@ieee.org>
 #ifndef DAC53608_H__
 #define DAC53608_H__
 

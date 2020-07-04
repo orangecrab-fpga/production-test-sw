@@ -1,6 +1,7 @@
 /* This file is part of OrangeCrab-test
  *
  * Copyright 2020 Gregory Davill <greg.davill@gmail.com> 
+ * Copyright 2020 Michael Welling <mwelling@ieee.org>
  */
 
 #include <stdlib.h>
@@ -79,13 +80,11 @@ int main(int i, char **c)
 	dac_read_id();
 
 	/* Release I/O control over DAC */
-	gpio_oe_write(1 << CSR_GPIO_OUT_DAC_CLR_OFFSET);
-	gpio_oe_write(1 << CSR_GPIO_OUT_DAC_LDAC_OFFSET);
-
 	/* ~CLR=1 to avoid forcing DAC clear */
-	gpio_out_write(1 << CSR_GPIO_OUT_DAC_CLR_OFFSET);
 	/* ~LDAC=0 for async output mode */
-	gpio_out_write(0 << CSR_GPIO_OUT_DAC_LDAC_OFFSET);
+	gpio_oe_write(1 << CSR_GPIO_OUT_DAC_CLR_OFFSET | 1 << CSR_GPIO_OUT_DAC_LDAC_OFFSET);
+	gpio_out_write(1 << CSR_GPIO_OUT_DAC_CLR_OFFSET | 0 << CSR_GPIO_OUT_DAC_LDAC_OFFSET);
+
 
 
 	printf("GPIO test started\n");
@@ -119,10 +118,23 @@ int main(int i, char **c)
 	printf("\nGPIO test passed\n");
 
 	/* ramp up counts to DAC outputs */
-	for(int j = 0; j < 0x0fff; j+=0x100) {
-		for(int i = 0; i < 6; i++) {
-			printf("DAC %d = %x\n",i, j);
+	for(int i = 0; i < 6; i++) {
+		for(int j = 0; j < 0x0fff; j+=0x100) {
+			printf("DAC%d: %d, ",i, j);
 			dac_write_channel(i, j);
+
+			msleep(2);
+
+			/* Perform ADC measurement */
+			while(asense_status_read() != 1);
+			asense_control_write(((1 + i) << CSR_ASENSE_CONTROL_CHAN_OFFSET) |
+				 ( 1 << CSR_ASENSE_CONTROL_START_OFFSET));
+
+			while(asense_status_read() != 1);
+
+			printf("ADC: %d\n", asense_result_read());
+
+
 		}
 	}
 	printf("\n");

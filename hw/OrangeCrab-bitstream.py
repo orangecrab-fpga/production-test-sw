@@ -318,7 +318,7 @@ class BaseSoC(SoCCore):
         self.comb += platform.request("rst_n").eq(reset_code != 0xAA550001)
         
         # Analog Mux
-        self.asense = AnalogSense(platform.request("analog"))
+        self.submodules.asense = AnalogSense(platform.request("analog"))
         
         # The litex SPI module supports memory-mapped reads, as well as a bit-banged mode
         # for doing writes.
@@ -387,7 +387,7 @@ def main():
 
     # Build firmware
     soc.PackageFirmware(builder)
-    #generate_docs(soc, "build/documentation/", project_name="OrangeCrab Test SoC", author="Greg Davill")
+    generate_docs(soc, "build/documentation/", project_name="OrangeCrab Test SoC", author="Greg Davill")
         
     # Check if we have the correct files
     firmware_file = os.path.join(builder.output_dir, "software", "fw", "oc-fw.bin")

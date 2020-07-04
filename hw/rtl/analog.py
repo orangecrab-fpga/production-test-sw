@@ -59,7 +59,8 @@ class AnalogSense(Module, AutoCSR, ModuleDoc):
         self._result   = CSRStatus(24, description="Conversion result.")
 
         # FSM
-        self.fsm = fsm = FSM(reset_state="IDLE")
+        fsm = FSM(reset_state="IDLE")
+        self.submodules += fsm
         timer = Signal(18)
         timer_trig = Signal()
 
