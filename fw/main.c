@@ -16,6 +16,7 @@
 
 #include <dac53608.h>
 #include <mcp23s08.h>
+#include <asense.h>
 
 #include <sleep.h>
 #include <flash-spi.h>
@@ -117,27 +118,20 @@ int main(int i, char **c)
 	}
 	printf("\nGPIO test passed\n");
 
+	printf("\nADC test started\n");
 	/* ramp up counts to DAC outputs */
 	for(int i = 0; i < 6; i++) {
 		for(int j = 0; j < 0x0fff; j+=0x100) {
 			printf("DAC%d: %d, ",i, j);
 			dac_write_channel(i, j);
 
-			msleep(2);
-
-			/* Perform ADC measurement */
-			while(asense_status_read() != 1);
-			asense_control_write(((1 + i) << CSR_ASENSE_CONTROL_CHAN_OFFSET) |
-				 ( 1 << CSR_ASENSE_CONTROL_START_OFFSET));
-
-			while(asense_status_read() != 1);
-
-			printf("ADC: %d\n", asense_result_read());
-
-
+			/* Perform 3 ADC measurements */
+			printf("ADC%d: %ld",i, adc_read_channel(i+1));
+			printf(",%ld", adc_read_channel(i+1));
+			printf(",%ld\n", adc_read_channel(i+1));
 		}
 	}
-	printf("\n");
+	printf("\nADC test finished\n");
 
 	/* Test of LED GPIO */
 	uint8_t led_gpio_patterns[] = {0x0, 0x1, 0x2, 0x4, 0x7};
@@ -154,7 +148,9 @@ int main(int i, char **c)
 		printf("{%01X:%01X}\n",out_pattern, read_pattern);
 	}
 
+
 	/*  */
+	printf("\nTests Complete\n");
 
 	return 0;
 }

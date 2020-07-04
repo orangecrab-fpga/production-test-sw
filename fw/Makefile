@@ -13,6 +13,7 @@ OBJECTS = isr.o			\
 		flash-spi.o     \
 		dac53608.o      \
 		mcp23s08.o      \
+		asense.o        \
 	    main.o
 
 
