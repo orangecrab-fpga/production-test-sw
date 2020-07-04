@@ -52,6 +52,7 @@ from migen.genlib.cdc import MultiReg
 import valentyusb
 
 from rtl.rgb import RGB
+from rtl.analog import AnalogSense
 from litex.soc.cores import spi_flash
 from litex.soc.cores.gpio import GPIOTristate, GPIOOut
 
@@ -79,7 +80,15 @@ extras = [
         Subsignal("cs_n", Pins("GPIO:0"), IOStandard("LVCMOS33"))
     ),
     ("ldac", 0, Pins("GPIO:1"), IOStandard("LVCMOS33")),
-    ("clrdac", 0, Pins("GPIO:5"), IOStandard("LVCMOS33"))
+    ("clrdac", 0, Pins("GPIO:5"), IOStandard("LVCMOS33")),
+    ("analog", 0,
+        Subsignal("mux", Pins("F4 F3 F2 H1")),
+        Subsignal("enable", Pins("F1")),
+        Subsignal("ctrl", Pins("G1")),
+        Subsignal("sense_p", Pins("H3"), IOStandard("LVCMOS33D")),
+        Subsignal("sense_n", Pins("G3")),
+        IOStandard("LVCMOS33")
+    )
 ]
 
 
@@ -216,6 +225,7 @@ class BaseSoC(SoCCore):
         "button":         17,
         "spi":            18,
         "i2c":            19,
+        "asense":         20,
     }
     csr_map.update(SoCCore.csr_map)
 
@@ -302,15 +312,14 @@ class BaseSoC(SoCCore):
         # i2c
         self.submodules.i2c = I2CMaster(platform.request("i2c"))
 
-    
         # Controllable Self Reset
         reset_code = Signal(32, reset=0)
         self.submodules.self_reset = GPIOOut(reset_code)
         self.comb += platform.request("rst_n").eq(reset_code != 0xAA550001)
         
-
+        # Analog Mux
+        self.asense = AnalogSense(platform.request("analog"))
         
-
         # The litex SPI module supports memory-mapped reads, as well as a bit-banged mode
         # for doing writes.
         spi_pads = platform.request("spiflash4x")
