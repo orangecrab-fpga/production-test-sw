@@ -23,6 +23,9 @@ Vchg = lambda t: Vs * (1 - math.exp(-((t + 200) / K)))
 adc_calib = []
 rails_voltage = dict()
 
+# https://stackoverflow.com/questions/4417546/constantly-print-subprocess-output-while-process-is-running
+def execute(command):
+    subprocess.check_call(command, stdout=sys.stdout, stderr=sys.stdout)
 
 def ProcessLines(line):
     if "Info:" in line:
@@ -71,9 +74,13 @@ def ProcessLines(line):
             else:
                 print(f"Test:ADC-RAIL, {rail} OK")
 
+# Load bootloader
+# display info while loading the bootloader
+print("-- Loading Bootloader into FLASH..")
+bootloader = '../prebuilt/foboot-v3.1-orangecrab-r0.2-25F.bit'
+execute(["ecpprog", bootloader])
 
-
-# Load bitstream over JTAG
+# Load test-bitstream over JTAG
 test_bitstream = '../hw/build/orangecrab/gateware/orangecrab.bit'
 cmd = subprocess.Popen(["ecpprog", "-S", test_bitstream],
                         stdout=subprocess.PIPE,
@@ -88,8 +95,12 @@ cmd = subprocess.Popen(["ecpprog", "-S", test_bitstream],
 # check results of programming
 if "IDCODE: 0x41111043" in cmd_stdout.decode('ascii'):
     print("JTAG:LFE5U-25 Detected")
-if "ECP5 Status Register: 0x00200100" in cmd_stdout.decode('ascii'):
-    print("JTAG:Load Sucessful")
+    if "ECP5 Status Register: 0x00200100" in cmd_stdout.decode('ascii'):
+        print("JTAG:Load Sucessful")
+    else:
+        print("JTAG: Load Error")
+else:
+    print("JTAG: Load Error")
 
 
 print("-- Wait for USB device..")
