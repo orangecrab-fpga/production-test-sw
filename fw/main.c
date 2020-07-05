@@ -149,6 +149,8 @@ int main(int i, char **c)
 			/* Perform ADC measurements */
 			printf("ADC=%ld\n", adc_read_channel(i+1));
 		}
+		/* Disable channel  once tested */
+		dac_write_channel(i, 0);
 	}
 
 	printf("ADC-GND=%ld\n", adc_read_channel(0));
