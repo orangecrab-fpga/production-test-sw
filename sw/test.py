@@ -58,7 +58,7 @@ def ProcessLines(line):
         
             d = [abs((x-y)/y) for x,y in zip(ch_x,ch_y) if y != 0 and x != 0]
             if max(d) > 0.25:
-                print(d)
+                #print(d)
                 print("Test:ADC, Fail")
             else:
                 print(f"Test:ADC, CH{i} OK")
@@ -69,7 +69,7 @@ def ProcessLines(line):
             v_e = (rails_voltage[rail] - v) / v
 
             if abs(v_e) > 0.25:
-                print(f"{rail}: {v_e:.3f}")
+                #print(f"{rail}: {v_e:.3f}")
                 print("Test:ADC-RAIL, Fail")
             else:
                 print(f"Test:ADC-RAIL, {rail} OK")
