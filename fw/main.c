@@ -24,12 +24,12 @@
 
 void print_buffer(uint8_t* ptr, uint8_t len){
 	for(int i = 0; i < len; i++){
-		printf("%s0x%02x\"",i > 0 ? ",\"" : "\"", ptr[i]);
+		printf("%02x ", ptr[i]);
 	}
 }
 
 void test_fail(const char* str){
-	printf("Test Fail %s :(\n", str);
+	printf("%s\n", str);
 
 	while(1);
 }
@@ -44,41 +44,59 @@ int main(int i, char **c)
 
 	printf("\n");
 
-	printf("Hello from OrangeCrab! o/ \n");
-	printf("{\"firmware build date\":\""__DATE__ "\", \"firmware build time\": \"" __TIME__ "\"}\n");
+	printf("Info:Hello from OrangeCrab! o/ \n");
+	printf("Info:build_date "__DATE__" "__TIME__ "\n");
 
-	printf("{\"migen sha1\":\""MIGEN_GIT_SHA1"\"}\n");
-	printf("{\"litex sha1\":\""LITEX_GIT_SHA1"\"}\n");
+	printf("Info:test-repo "REPO_GIT_SHA1"\n");
+	printf("Info:migen "MIGEN_GIT_SHA1"\n");
+	printf("Info:litex "LITEX_GIT_SHA1"\n");
 
 
-	//msleep(100);
-
+	printf("Test:DDR3 Start\n");
 	/* Init Memory */
 	int sdr_ok = sdrinit();
 	if(sdr_ok == 0){
-		test_fail("DDR3 Init failure");
+		test_fail("Test:DDR3 Fail");
+		//self_reset_out_write(0xAA550001);
 	}
+	printf("Test:DDR3 Pass\n");
 
-	//self_reset_out_write(0xAA550001);
 
 	/* Check for SPI FLASH */
-	spiInit();
-	unsigned char buf[8] = {0};
-	spiId(buf);
+	printf("Test:SPI-FLASH, Start\n");
 
-	printf("{\"spi id\":[");
-	print_buffer(buf, 5);
-	printf("]}\n");
+	spiInit();
+	unsigned char id[8] = {0};
+	unsigned char uuid[8] = {0};
+	spiId(id);
+
+	printf("Info:SPI-FLASH-ID=");
+	print_buffer(id, 5);
+	printf("\n");
+	if(id[0] != 0xef |
+	   id[1] != 0x17 |
+	   id[2] != 0xef |
+	   id[3] != 0x40 |
+	   id[4] != 0x18 ){
+		   test_fail("Test:SPI-FLASH, Fail");
+	   }
 
 	// Check Flash UUID
-	spi_read_uuid(buf);
-	printf("{\"spi uuid\":[");
-	print_buffer(buf, 8);
-	printf("]}\n");
+	spi_read_uuid(uuid);
+	printf("Info:SPI-FLASH-UUID=");
+	print_buffer(uuid, 8);
+	printf("\n");
+	
+	printf("Test:SPI-FLASH, Passed\n");
+
 
 	/* Configure I2C, read ID code from DAC */
+	printf("Test:I2C, Start\n");
 	dac_reset();
-	dac_read_id();
+	if(dac_read_id() == false){
+		test_fail("Test:I2C, Fail");
+	}
+	printf("Test:I2C, Pass\n");
 
 	/* Release I/O control over DAC */
 	/* ~CLR=1 to avoid forcing DAC clear */
@@ -88,7 +106,7 @@ int main(int i, char **c)
 
 
 
-	printf("GPIO test started\n");
+	printf("Test:GPIO, Start\n");
 	/*set all MCP GPIOs to output */
 	uint8_t io_data = 0;
 	mcp23s08_write(0, io_data);
@@ -107,39 +125,68 @@ int main(int i, char **c)
 			gpio_synd = ((gpio_synd >> 6) & 0x1) | ((gpio_synd >> 8) & 0x3e);
 
 			/* print and check for match */
-			printf("%X : %X \n", io_data, gpio_synd);
+			//printf("%X : %X \n", io_data, gpio_synd);
 			if (io_data != gpio_synd)
-				test_fail("GPIO Test Failure");
+				test_fail("Test:GPIO, Fail");
 
 			/* rotate the bits */
 			io_data = (io_data << 1) & 0x3f;
 			if (j%2) io_data |= 1;
 		}
 	}
-	printf("\nGPIO test passed\n");
+	printf("\nTest:GPIO, Pass\n");
 
-	printf("\nADC test started\n");
+	/* Connect load to the battery connector, upto 250ms before charger detects this. */
+	mcp23s08_write(0x9, 1 << 7);
+
+
+	printf("Test:ADC, Start\n");
 	/* ramp up counts to DAC outputs */
 	for(int i = 0; i < 6; i++) {
-		for(int j = 0; j < 0x0fff; j+=0x100) {
-			printf("DAC%d: %d, ",i, j);
+		for(int j = 0; j < 0x0fff; j+=0x80) {
+			printf("CH=%d, DAC=%d, ",i, j);
 			dac_write_channel(i, j);
-
-			/* Perform 3 ADC measurements */
-			printf("ADC%d: %ld",i, adc_read_channel(i+1));
-			printf(",%ld", adc_read_channel(i+1));
-			printf(",%ld\n", adc_read_channel(i+1));
+			/* Perform ADC measurements */
+			printf("ADC=%ld\n", adc_read_channel(i+1));
 		}
 	}
-	printf("\nADC test finished\n");
 
-	while(1){
-		for(int j = 0; j < 0x0fff; j+=0x100){
-			dac_write_channel(0, j);
-			/* Perform 3 ADC measurements */
-			adc_read_channel(1);
-		}
+	printf("ADC-GND=%ld\n", adc_read_channel(0));
+	printf("ADC-VREF=%ld\n", adc_read_channel(7));
+	printf("ADC-3V3=%ld\n", adc_read_channel(8));
+	printf("ADC-1V35=%ld\n", adc_read_channel(12));
+	printf("ADC-2V5=%ld\n", adc_read_channel(13));
+	printf("ADC-1V1=%ld\n", adc_read_channel(14));
+	printf("ADC-VBAT=%ld\n", adc_read_channel(15));
+	printf("Test:ADC, Finish\n");
+
+
+	/* Battery test */
+
+	/* Enable current sink */
+	mcp23s08_write(0x9, 1 << 6 | 1 << 7);
+	printf("bat_en=1,sink_en=1: %ld (vbat)\n", adc_read_channel(15));
+	for(int i = 0; i < 20; i++){
+		msleep(1);
+		printf("Bat: %ld (vbat)\n", adc_read_channel(15));
 	}
+
+	/* Enable current sink */
+	mcp23s08_write(0x9, 1 << 7);
+	printf("sink_en=1: %ld (vbat)\n", adc_read_channel(15));
+	for(int i = 0; i < 20; i++){
+		msleep(1);
+		printf("Bat: %ld (vbat)\n", adc_read_channel(15));
+	}
+
+	/* Enable current sink */
+	mcp23s08_write(0x9, 0);
+	printf("vbat: %ld (vbat)\n", adc_read_channel(15));
+	for(int i = 0; i < 20; i++){
+		msleep(1);
+		printf("Bat: %ld (vbat)\n", adc_read_channel(15));
+	}
+
 
 	/* Test of LED GPIO */
 	uint8_t led_gpio_patterns[] = {0x0, 0x1, 0x2, 0x4, 0x7};

@@ -46,14 +46,13 @@ void dac_reset()
 
 }
 
-uint8_t dac_read_id()
+bool dac_read_id()
 {
 
 	uint16_t value = 0;
 	bool ret = dac_read(2, &value);
-	printf("Read i2c: 0x%04x %d\n", value, ret);
 
-	//if(((data[0] << 2 | data[1] >> 6) & 0b111111) == 0b001100){
-	//	printf("Correct ID for DAC53608 (0b001100)\n");
-	//}
+	if(ret == true & value == 0x0300)
+		return true;
+	return false;
 }

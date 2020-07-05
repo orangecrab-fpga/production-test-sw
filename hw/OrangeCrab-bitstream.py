@@ -19,7 +19,7 @@ import sys
 import os
 import shutil
 import argparse
-
+import subprocess
 
 import inspect
 
@@ -326,6 +326,13 @@ class BaseSoC(SoCCore):
         self.submodules.lxspi = spi_flash.SpiFlashDualQuad(spi_pads, dummy=6, endianness="little")
         self.lxspi.add_clk_primitive(platform.device)
         self.register_mem("spiflash", self.mem_map["spiflash"], self.lxspi.bus, size=16*1024*1024)
+
+        # Add GIT repo to the firmware
+        git_rev_cmd = subprocess.Popen(["git", "rev-parse", "--short", "HEAD"],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE)
+        (git_stdout, _) = git_rev_cmd.communicate()
+        self.add_constant('REPO_GIT_SHA1',git_stdout.decode('ascii').strip('\n'))
 
 
 

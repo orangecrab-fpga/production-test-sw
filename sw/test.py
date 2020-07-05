@@ -7,8 +7,14 @@ import serial
 from time import sleep
 
 
-# Simple python script to find and connect to a serial port automtically when it's connected. 
+def ProcessLines(line):
+    if "Info:" in line:
+        print(line, end='')
 
+    if "Test:" in line:
+        print(line, end='')
+
+# Simple python script to find and connect to a serial port automtically when it's connected. 
 while True:
     ports = list(serial.tools.list_ports.comports())
     for p in ports:
@@ -20,9 +26,10 @@ while True:
                 ser = serial.Serial(p.device)
 
                 while True:
-                    data = ser.read_all()
+                    data = ser.readline()
                     if data:
-                        print(data.decode(encoding='ascii'), end='')
+                        ProcessLines(data.decode(encoding='ascii'))
+                        #print(data.decode(encoding='ascii'), end='')
                     else:
                         sleep(0.01)
             except:
@@ -30,6 +37,6 @@ while True:
                 ser.close()
                 ...
             
-    sleep(0.1)
+    sleep(0.2)
 
    

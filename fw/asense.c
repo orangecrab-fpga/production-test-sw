@@ -14,3 +14,7 @@ uint32_t adc_read_channel(uint8_t chan)
     /* Return result */
 	return asense_result_read();
 }
+
+uint32_t adc_count_to_mv(uint32_t value, uint32_t cal){
+    return (value / cal);
+}
