@@ -61,6 +61,9 @@ while True:
     c = getch()
 
     if c == ' ':
-        execute(["python3", "OrangeCrab-tests.py"])
+        try:
+            execute(["python3", "OrangeCrab-tests.py"])
+        except:
+            ...
     else:
         break
