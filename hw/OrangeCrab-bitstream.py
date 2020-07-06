@@ -396,7 +396,7 @@ def main():
 
     # Build firmware
     soc.PackageFirmware(builder)
-    generate_docs(soc, "build/documentation/", project_name="OrangeCrab Test SoC", author="Greg Davill")
+    #generate_docs(soc, "build/documentation/", project_name="OrangeCrab Test SoC", author="Greg Davill")
         
     # Check if we have the correct files
     firmware_file = os.path.join(builder.output_dir, "software", "fw", "oc-fw.bin")
