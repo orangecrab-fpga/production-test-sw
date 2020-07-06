@@ -188,6 +188,7 @@ if "IDCODE: 0x41111043" in cmd_stdout.decode('ascii'):
     #    print("JTAG: Load Error")
 else:
     print("JTAG: Load Error")
+    finish("FAIL")
 
 
 print("-- Wait for USB device..")
@@ -250,6 +251,7 @@ if "IDCODE: 0x41111043" in cmd_stdout.decode('ascii'):
     print("JTAG: Load Complete")
 else:
     print("JTAG: Load Error")
+    finish("FAIL")
 
 print("INFO: Please press `btn0` on DUT")
 
