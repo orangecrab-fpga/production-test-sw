@@ -52,14 +52,6 @@ int main(int i, char **c)
 	printf("Info:litex "LITEX_GIT_SHA1"\n");
 
 
-	printf("Test:DDR3 Start\n");
-	/* Init Memory */
-	int sdr_ok = sdrinit();
-	if(sdr_ok == 0){
-		test_fail("Test:DDR3 Fail");
-		//self_reset_out_write(0xAA550001);
-	}
-	printf("Test:DDR3 Pass\n");
 
 
 	/* Check for SPI FLASH */
@@ -78,7 +70,7 @@ int main(int i, char **c)
 	   id[2] != 0xef |
 	   id[3] != 0x40 |
 	   id[4] != 0x18 ){
-		   test_fail("Test:SPI-FLASH, Fail");
+		   test_fail("Test:SPI-FLASH|Fail");
 	   }
 
 	// Check Flash UUID
@@ -87,16 +79,24 @@ int main(int i, char **c)
 	print_buffer(uuid, 8);
 	printf("\n");
 	
-	printf("Test:SPI-FLASH, Passed\n");
+	printf("Test:SPI-FLASH|Pass\n");
 
+	printf("Test:DDR3 Start\n");
+	/* Init Memory */
+	int sdr_ok = sdrinit();
+	if(sdr_ok == 0){
+		test_fail("Test:DDR3|Fail");
+		//self_reset_out_write(0xAA550001);
+	}
+	printf("Test:DDR3|Pass\n");
 
 	/* Configure I2C, read ID code from DAC */
 	printf("Test:I2C, Start\n");
 	dac_reset();
 	if(dac_read_id() == false){
-		test_fail("Test:I2C, Fail");
+		test_fail("Test:I2C|Fail");
 	}
-	printf("Test:I2C, Pass\n");
+	printf("Test:I2C|Pass\n");
 
 	/* Release I/O control over DAC */
 	/* ~CLR=1 to avoid forcing DAC clear */
@@ -127,14 +127,14 @@ int main(int i, char **c)
 			/* print and check for match */
 			//printf("%X : %X \n", io_data, gpio_synd);
 			if (io_data != gpio_synd)
-				test_fail("Test:GPIO, Fail");
+				test_fail("Test:GPIO|Fail");
 
 			/* rotate the bits */
 			io_data = (io_data << 1) & 0x3f;
 			if (j%2) io_data |= 1;
 		}
 	}
-	printf("\nTest:GPIO, Pass\n");
+	printf("\nTest:GPIO|Pass\n");
 
 	/* Connect load to the battery connector, upto 250ms before charger detects this. */
 	mcp23s08_write(0x9, 1 << 7);

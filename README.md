@@ -46,26 +46,27 @@ JTAG:LFE5U-25 Detected
 JTAG:Load Sucessful
 -- Wait for USB device..
 -- Found OrangeCrab CDC [1209:5bf2 - Serial:None] ---
-Info:Hello from OrangeCrab! o/ 
-Info:build_date Jul  5 2020 21:22:39
-Info:test-repo da728ee
-Info:migen b1b2b29
-Info:litex 1e605fb2
-Test:DDR3 Pass
-Info:SPI-FLASH-ID=ef 17 ef 40 18 
-Info:SPI-FLASH-UUID=e4 69 30 d3 1b 23 3b 26 
-Test:SPI-FLASH, Passed
-Test:I2C, Pass
-Test:GPIO, Pass
-Test:ADC, CH0 OK
-Test:ADC, CH1 OK
-Test:ADC, CH2 OK
-Test:ADC, CH3 OK
-Test:ADC, CH4 OK
-Test:ADC, CH5 OK
-Test:ADC-RAIL, VREF OK
-Test:ADC-RAIL, 3V3 OK
-Test:ADC-RAIL, 1V35 OK
-Test:ADC-RAIL, 2V5 OK
-Test:ADC-RAIL, 1V1 OK
+INFO: Hello from OrangeCrab! o/ 
+INFO: build_date Jul  6 2020 10:59:15
+INFO: test-repo 6487b17
+INFO: migen b1b2b29
+INFO: litex 1e605fb2
+INFO: SPI-FLASH-ID=ef 17 ef 40 18 
+INFO: SPI-FLASH-UUID=e4 69 30 d3 1b 23 3b 26 
+TEST: SPI-FLASH           OK
+TEST: DDR3                OK
+TEST: I2C                 OK
+TEST: GPIO                OK
+TEST: ADC CH0             OK
+TEST: ADC CH1             FAIL
+TEST: ADC CH2             FAIL
+TEST: ADC CH3             OK
+TEST: ADC CH4             OK
+TEST: ADC CH5             OK
+TEST: ADC VREF            OK
+TEST: ADC 3V3             OK
+TEST: ADC 1V35            OK
+TEST: ADC 2V5             OK
+TEST: ADC 1V1             OK
+
 ```

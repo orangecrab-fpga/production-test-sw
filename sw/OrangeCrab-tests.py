@@ -10,6 +10,12 @@ import builtins
 
 from time import sleep
 
+
+BRIGHTGREEN = '\033[92;1m'
+BRIGHTRED = '\033[91;1m'
+ENDC = '\033[0m'
+
+
 Vs = 3.3
 Fsamp = 96e6	# 48 MHz DDR
 Csamp = 100e-9	# 100 nF
@@ -27,12 +33,29 @@ rails_voltage = dict()
 def execute(command):
     subprocess.check_call(command, stdout=sys.stdout, stderr=sys.stdout)
 
-def ProcessLines(line):
-    if "Info:" in line:
-        print(line)
+def log(logtype, message, result=None):
+    if logtype == "info":
+        print(f'INFO: {message}')
+    elif logtype == "test":
+        s = f'TEST: {message:20s}{result}'
+        if result == "OK":
+            print(BRIGHTGREEN + s + ENDC)
+        if result == "FAIL":
+            print(BRIGHTRED + s + ENDC)
 
-    if "Test:" in line and "Pass" in line:
-        print(line)
+def ProcessLines(line):
+    if line.startswith("Info:"):
+        log("info", line[5:])
+
+    if line.startswith("Test:"):
+        if 'pass' in line.lower():
+            log("test", line[5:].split('|')[0], "OK")
+        if 'failed' in line.lower():
+            log("test", line[5:].split('|')[0], "FAIL")
+        if 'started' in line.lower():
+            log("info", line[5:])
+    #if "Test:" in line and "Pass" in line:
+        #print(line)
 
     # save ADC values in arrays
     if "CH=" in line:
@@ -59,9 +82,10 @@ def ProcessLines(line):
             d = [abs((x-y)/y) for x,y in zip(ch_x,ch_y) if y != 0 and x != 0]
             if max(d) > 0.25:
                 #print(d)
-                print("Test:ADC, Fail")
+                #print("Test:ADC, Fail")
+                log("test", f"ADC CH{i}", "FAIL")
             else:
-                print(f"Test:ADC, CH{i} OK")
+                log("test", f"ADC CH{i}", "OK")
 
         rails = {'VREF':3.3, '3V3':3.3, '1V35':1.35, '2V5':2.5, '1V1':1.1}
 
@@ -70,15 +94,15 @@ def ProcessLines(line):
 
             if abs(v_e) > 0.25:
                 #print(f"{rail}: {v_e:.3f}")
-                print("Test:ADC-RAIL, Fail")
+                log("test", f"ADC {rail}", "FAIL")
             else:
-                print(f"Test:ADC-RAIL, {rail} OK")
+                log("test", f"ADC {rail}", "OK")
 
 # Load bootloader
 # display info while loading the bootloader
 print("-- Loading Bootloader into FLASH..")
 bootloader = '../prebuilt/foboot-v3.1-orangecrab-r0.2-25F.bit'
-execute(["ecpprog", bootloader])
+#execute(["ecpprog", bootloader])
 
 # Load test-bitstream over JTAG
 test_bitstream = '../hw/build/orangecrab/gateware/orangecrab.bit'
