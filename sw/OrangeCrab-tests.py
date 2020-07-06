@@ -185,10 +185,10 @@ cmd = subprocess.Popen(["ecpprog", "-S", test_bitstream],
 # check results of programming
 if "IDCODE: 0x41111043" in cmd_stdout.decode('ascii'):
     print("JTAG:LFE5U-25 Detected")
-    if "ECP5 Status Register: 0x00200100" in cmd_stdout.decode('ascii'):
-        print("JTAG:Load Sucessful")
-    else:
-        print("JTAG: Load Error")
+    #if "ECP5 Status Register: 0x00200100" in cmd_stdout.decode('ascii'):
+    #    print("JTAG:Load Sucessful")
+    #else:
+    #    print("JTAG: Load Error")
 else:
     print("JTAG: Load Error")
 
