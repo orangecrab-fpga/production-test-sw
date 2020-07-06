@@ -54,7 +54,7 @@ import valentyusb
 from rtl.rgb import RGB
 from rtl.analog import AnalogSense
 from litex.soc.cores import spi_flash
-from litex.soc.cores.gpio import GPIOTristate, GPIOOut
+from litex.soc.cores.gpio import GPIOTristate, GPIOOut, GPIOIn
 
 # Small hack to add Pull-up to the RGB-LED I/O pins, for detecting shorts
 rgb_led_io = [
@@ -316,6 +316,8 @@ class BaseSoC(SoCCore):
         reset_code = Signal(32, reset=0)
         self.submodules.self_reset = GPIOOut(reset_code)
         self.comb += platform.request("rst_n").eq(reset_code != 0xAA550001)
+
+        self.submodules.button = GPIOIn(platform.request("usr_btn"))
         
         # Analog Mux
         self.submodules.asense = AnalogSense(platform.request("analog"))

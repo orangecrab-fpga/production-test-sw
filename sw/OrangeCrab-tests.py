@@ -42,8 +42,12 @@ def log(logtype, message, result=None):
             print(BRIGHTGREEN + s + ENDC)
         if result == "FAIL":
             print(BRIGHTRED + s + ENDC)
+    elif logtype == "debug":
+        ...
+        #print(message)
 
 def ProcessLines(line):
+    log("debug", line)
     if line.startswith("Info:"):
         log("info", line[5:])
 
@@ -102,7 +106,7 @@ def ProcessLines(line):
 # display info while loading the bootloader
 print("-- Loading Bootloader into FLASH..")
 bootloader = '../prebuilt/foboot-v3.1-orangecrab-r0.2-25F.bit'
-#execute(["ecpprog", bootloader])
+execute(["ecpprog", bootloader])
 
 # Load test-bitstream over JTAG
 test_bitstream = '../hw/build/orangecrab/gateware/orangecrab.bit'
@@ -161,4 +165,30 @@ while test_running == False:
             
     sleep(0.2)
 
-   
+
+while(True):
+    # check for DFU device attach?
+    cmd = subprocess.Popen(["dfu-util","-l"],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    (cmd_stdout, cmd_stderr) = cmd.communicate()
+
+    #print(cmd_stdout)
+    sleep(0.2)
+    if "OrangeCrab r0.2 DFU Bootloader" in cmd_stdout.decode('ascii'):
+        log('test', "DFU mode detected", "OK")
+        break
+
+
+# load quick demo program, to blink the LED
+dfu_app  = '../prebuilt/blink_fw.dfu'
+cmd = subprocess.Popen(["dfu-util","-D", dfu_app],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+(cmd_stdout, cmd_stderr) = cmd.communicate()
+
+#print(cmd_stdout)
+if 'Download done.' and 'status(0) = No error condition is present' in cmd_stdout.decode('ascii'):
+    log('test', "DFU download", "OK")
+else:
+    log('test', "DFU download", "FAIL")

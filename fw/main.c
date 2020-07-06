@@ -205,10 +205,33 @@ int main(int i, char **c)
 		printf("{%01X:%01X}\n",out_pattern, read_pattern);
 	}
 
-	/*  */
-	printf("Test:DONE, Finish\n");
+	
+	gpio_led_out_write(~2);
 
-	while(1){}
+	int toggle = 0;
+
+	/* Final test, ask for operator to press button, reset into bootloader */
+	printf("Info:Please press `btn0` on DUT\n");
+	printf("Test:DONE, Finish\n");
+	msleep(50);
+	while(1){
+		msleep(10);
+
+		if(++toggle > 10){
+			gpio_led_out_write(~0);
+		}
+		if(toggle > 20){
+			gpio_led_out_write(~2);
+			toggle = 0;
+		}
+
+		if(button_in_read() == 0)
+		{
+			while(1){
+				self_reset_out_write(0xAA550001);
+			}
+		}
+	}
 
 	return 0;
 }
