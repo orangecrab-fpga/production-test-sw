@@ -68,7 +68,7 @@ def finish(result):
         f.write(l + '\n')
     f.close()
 
-    sys.exit("")
+    sys.exit(0)
 
 
 def log(logtype, message, result=None):
