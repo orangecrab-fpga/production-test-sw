@@ -130,7 +130,7 @@ def ProcessLines(line):
             ch_x = [(int(x['DAC']) * 3.3 / 0x1000) for x in adc_calib if x['CH'] == str(i)]
         
             d = [abs((x-y)/y) for x,y in zip(ch_x,ch_y) if y != 0 and x != 0]
-            if max(d) > 0.25:
+            if statistics.mean(d) > 0.2: # average error of 20% over full range
                 log("test", f"ADC CH{i}", "FAIL")
             else:
                 log("test", f"ADC CH{i}", "OK")
