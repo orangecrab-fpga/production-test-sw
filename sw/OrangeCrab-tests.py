@@ -8,6 +8,7 @@ import sys
 import os
 import math
 import builtins
+import statistics
 
 from time import sleep, localtime, strftime
 
@@ -29,6 +30,8 @@ Vchg = lambda t: Vs * (1 - math.exp(-((t + 200) / K)))
 
 adc_calib = []
 rails_voltage = dict()
+
+batt_values = []
 
 serial_log = []
 output_log = []
@@ -57,7 +60,7 @@ def finish(result):
     #print(current_time)
 
 
-    f= open(f"{current_time}.txt","w+")
+    f= open(f"log/{result}-{current_time}.txt","w+")
     for l in output_log:
         f.write(l + '\n')
     f.write("\r\n-=-=-=-=-= RAW serial log -=-=-=-=-=-=\r\n")
@@ -113,8 +116,10 @@ def ProcessLines(line):
 
             if "VBAT" in rail:
                 voltage = voltage * 2
+                batt_values.append(value)
+            else:
+                rails_voltage[rail] = voltage
 
-            rails_voltage[rail] = voltage
         except:
             ...
 
@@ -140,6 +145,24 @@ def ProcessLines(line):
             else:
                 log("test", f"ADC {rail}", "OK")
 
+    # Battery test?
+    if "Test:BATT, Finish" in line:
+        #print(batt_values)
+
+        # When we connect a battery, the charger sees it and then starts charging.
+        # We can monitor the battery voltage to detect that the charge voltage is applied
+
+        # Ignore first values, check mean of first 5 values
+        batt_connect = statistics.mean(batt_values[1:6])
+        batt_charge = statistics.mean(batt_values[8:12])
+
+        if (batt_charge - batt_connect) > 1000:
+            log("test", f"BATT CHARGE", "OK")
+        else:
+            log("test", f"BATT CHARGE", "FAIL")
+
+
+
 # Load bootloader
 # display info while loading the bootloader
 print("-- Loading Bootloader into FLASH..")
@@ -147,7 +170,8 @@ bootloader = '../prebuilt/foboot-v3.1-orangecrab-r0.2-25F.bit'
 execute(["ecpprog", bootloader])
 
 # Load test-bitstream over JTAG
-test_bitstream = '../hw/build/orangecrab/gateware/orangecrab.bit'
+#test_bitstream = '../hw/build/orangecrab/gateware/orangecrab.bit'
+test_bitstream = '../prebuilt/orangecrab-test-25F.bit'
 cmd = subprocess.Popen(["ecpprog", "-S", test_bitstream],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE)
