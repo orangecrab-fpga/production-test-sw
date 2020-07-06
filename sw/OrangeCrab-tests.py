@@ -135,6 +135,8 @@ def ProcessLines(line):
             else:
                 log("test", f"ADC CH{i}", "OK")
 
+            log("debug", f" - ADC CH{i} mean = {statistics.mean(d):.2f}")
+
         rails = {'VREF':3.3, '3V3':3.3, '1V35':1.35, '2V5':2.5, '1V1':1.1}
 
         for rail,v in rails.items():
@@ -163,13 +165,8 @@ def ProcessLines(line):
 
 
 
-# Load bootloader
-# display info while loading the bootloader
-print("-- Loading Bootloader into FLASH..")
-bootloader = '../prebuilt/foboot-v3.1-orangecrab-r0.2-25F.bit'
-execute(["ecpprog", bootloader])
-
 # Load test-bitstream over JTAG
+print("-- Loading test bitstream into SRAM..")
 #test_bitstream = '../hw/build/orangecrab/gateware/orangecrab.bit'
 test_bitstream = '../prebuilt/orangecrab-test-25F.bit'
 cmd = subprocess.Popen(["ecpprog", "-S", test_bitstream],
@@ -232,6 +229,29 @@ while test_running == False:
             
     sleep(0.2)
 
+
+
+
+# Load bootloader
+# display info while loading the bootloader
+print("-- Loading Bootloader into FLASH..")
+bootloader = '../prebuilt/foboot-v3.1-orangecrab-r0.2-25F.bit'
+execute(["ecpprog", bootloader])
+
+# Load program that monitors button, and then reboots into bootloader
+test_bitstream = '../prebuilt/orangecrab-reboot-25F.bit'
+cmd = subprocess.Popen(["ecpprog", "-S", test_bitstream],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE)
+(cmd_stdout, cmd_stderr) = cmd.communicate()
+
+# check results of programming
+if "IDCODE: 0x41111043" in cmd_stdout.decode('ascii'):
+    print("JTAG: Load Complete")
+else:
+    print("JTAG: Load Error")
+
+print("INFO: Please press `btn0` on DUT")
 
 while(True):
     # check for DFU device attach?
