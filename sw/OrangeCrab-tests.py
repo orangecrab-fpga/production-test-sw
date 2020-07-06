@@ -5,10 +5,11 @@ import serial.tools.list_ports
 import serial
 import subprocess
 import sys
+import os
 import math
 import builtins
 
-from time import sleep
+from time import sleep, localtime, strftime
 
 
 BRIGHTGREEN = '\033[92;1m'
@@ -29,21 +30,61 @@ Vchg = lambda t: Vs * (1 - math.exp(-((t + 200) / K)))
 adc_calib = []
 rails_voltage = dict()
 
+serial_log = []
+output_log = []
+
 # https://stackoverflow.com/questions/4417546/constantly-print-subprocess-output-while-process-is-running
 def execute(command):
     subprocess.check_call(command, stdout=sys.stdout, stderr=sys.stdout)
 
+def finish(result):
+    if result == "PASS":
+        print(BRIGHTGREEN + """
+  ############################
+  #          PASS            #
+  ############################""" + ENDC)
+    if result == "FAIL":
+        print(BRIGHTRED + """
+  ############################
+  #          FAIL            #
+  ############################""" + ENDC)
+
+    # Flush log out to file
+    os.makedirs('log', exist_ok=True)
+
+    t = localtime()
+    current_time = strftime("%Y-%m-%d-%H:%M:%S", t)
+    #print(current_time)
+
+
+    f= open(f"{current_time}.txt","w+")
+    for l in output_log:
+        f.write(l + '\n')
+    f.write("\r\n-=-=-=-=-= RAW serial log -=-=-=-=-=-=\r\n")
+    for l in serial_log:
+        f.write(l + '\n')
+    f.close()
+
+    sys.exit("")
+
+
 def log(logtype, message, result=None):
     if logtype == "info":
+        ...
+        output_log.append(f'INFO: {message}')
         print(f'INFO: {message}')
     elif logtype == "test":
         s = f'TEST: {message:20s}{result}'
+        output_log.append(s)
+
         if result == "OK":
             print(BRIGHTGREEN + s + ENDC)
         if result == "FAIL":
             print(BRIGHTRED + s + ENDC)
+            finish("FAIL") # Exit early 
     elif logtype == "debug":
         ...
+        serial_log.append(message)
         #print(message)
 
 def ProcessLines(line):
@@ -85,8 +126,6 @@ def ProcessLines(line):
         
             d = [abs((x-y)/y) for x,y in zip(ch_x,ch_y) if y != 0 and x != 0]
             if max(d) > 0.25:
-                #print(d)
-                #print("Test:ADC, Fail")
                 log("test", f"ADC CH{i}", "FAIL")
             else:
                 log("test", f"ADC CH{i}", "OK")
@@ -97,7 +136,6 @@ def ProcessLines(line):
             v_e = (rails_voltage[rail] - v) / v
 
             if abs(v_e) > 0.25:
-                #print(f"{rail}: {v_e:.3f}")
                 log("test", f"ADC {rail}", "FAIL")
             else:
                 log("test", f"ADC {rail}", "OK")
@@ -157,10 +195,15 @@ while test_running == False:
                             break
                     else:
                         sleep(0.01)
+            except(SystemExit):
+                raise
             except:
                 print('--- Device Disconnect ---')
                 print(" Error:", sys.exc_info()[0])
-                ser.close()
+                try:
+                    ser.close()
+                except:
+                    ...
                 ...
             
     sleep(0.2)
@@ -176,7 +219,7 @@ while(True):
     #print(cmd_stdout)
     sleep(0.2)
     if "OrangeCrab r0.2 DFU Bootloader" in cmd_stdout.decode('ascii'):
-        log('test', "DFU mode detected", "OK")
+        log('test', "DFU Detect", "OK")
         break
 
 
@@ -189,6 +232,9 @@ cmd = subprocess.Popen(["dfu-util","-D", dfu_app],
 
 #print(cmd_stdout)
 if 'Download done.' and 'status(0) = No error condition is present' in cmd_stdout.decode('ascii'):
-    log('test', "DFU download", "OK")
+    log('test', "DFU Download", "OK")
 else:
-    log('test', "DFU download", "FAIL")
+    log('test', "DFU Download", "FAIL")
+
+
+finish("PASS")
