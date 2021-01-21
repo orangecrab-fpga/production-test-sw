@@ -45,7 +45,7 @@ oc-fw.elf: ../libbase/crt0.o \
 		-L../liblitedram \
 		-L../libbase \
 		-L../liblitespi \
-		-lcompiler_rt -llitedram -llitespi -lbase-nofloat 
+		-llitedram -lbase-nofloat -lcompiler_rt
 		
 ifneq ($(OS),Windows_NT)
 	chmod -x $@

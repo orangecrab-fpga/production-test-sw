@@ -38,7 +38,9 @@ from litex.soc.integration.soc_core import *
 from litex.soc.integration.soc_sdram import *
 from litex.soc.integration.builder import *
 
-from litedram.modules import MT41K64M16, MT41K128M16, MT41K256M16
+from litex.soc.interconnect.csr import *
+
+from litedram.modules import MT41K64M16, MT41K128M16, MT41K256M16, MT41K512M16
 from litedram.phy import ECP5DDRPHY
 
 from litex.soc.cores.spi import SPIMaster
@@ -169,8 +171,8 @@ class CRG(Module):
         sys2x_clk_ecsout = Signal()
         self.submodules.pll = pll = ECP5PLL()
         pll.register_clkin(clk48, 48e6)
-        pll.create_clkout(self.cd_sys2x_i, 2*sys_clk_freq)
-        pll.create_clkout(self.cd_init, 24e6)
+        pll.create_clkout(self.cd_sys2x_i, 2*sys_clk_freq, with_reset=False)
+        pll.create_clkout(self.cd_init, 24e6, with_reset=False)
         self.specials += [
             Instance("ECLKBRIDGECS",
                 i_CLK0   = self.cd_sys2x_i.clk,
@@ -199,8 +201,8 @@ class CRG(Module):
             usb_pll = ECP5PLL()
             self.submodules += usb_pll
             usb_pll.register_clkin(clk48, 48e6)
-            usb_pll.create_clkout(self.cd_usb_48, 48e6)
-            usb_pll.create_clkout(self.cd_usb_12, 12e6)
+            usb_pll.create_clkout(self.cd_usb_48, 48e6, with_reset=False)
+            usb_pll.create_clkout(self.cd_usb_12, 12e6, with_reset=False)
             self.specials += [
                 AsyncResetSynchronizer(self.cd_usb_48,  ~por_done | ~usb_pll.locked),
                 AsyncResetSynchronizer(self.cd_usb_12,  ~por_done | ~usb_pll.locked)
@@ -259,7 +261,7 @@ class BaseSoC(SoCCore):
         kwargs['uart_name']="usb_acm"
 
         # SoCCore ----------------------------------------------------------------------------------
-        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, csr_data_width=32, **kwargs)
+        SoCCore.__init__(self, platform, clk_freq=sys_clk_freq, csr_data_width=32,**kwargs)
 
         # CRG --------------------------------------------------------------------------------------
         self.submodules.crg = crg = CRG(platform, sys_clk_freq, with_usb_pll=True)
@@ -272,7 +274,7 @@ class BaseSoC(SoCCore):
                 "MT41K256M16": MT41K256M16,
                 "MT41K512M16": MT41K512M16,
             }
-            sdram_module = available_sdram_modules.get(sdram_device)
+            sdram_module = available_sdram_modules.get(kwargs.get('sdram_device'))
 
             ddram_pads = platform.request("ddram")
             self.submodules.ddrphy = ECP5DDRPHY(
@@ -302,8 +304,12 @@ class BaseSoC(SoCCore):
         # RGB LED
         platform.add_extension(rgb_led_io)
         led = platform.request("rgb_led_io", 0)
+        leds = Signal(3)
 
-        self.submodules.gpio_led = GPIOTristate(Cat(led.r,led.g,led.b))
+        self.submodules.gpio_led = GPIOTristate(leds)
+        self.comb += [
+            leds.eq(Cat(led.r,led.g,led.b))
+        ]
         self.submodules.gpio = GPIOTristateCustom(platform.request("gpio", 0))
 
         # SPI

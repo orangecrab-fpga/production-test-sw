@@ -1,6 +1,6 @@
 [submodule "hw/deps/valentyusb"]
 	path = hw/deps/valentyusb
-	url = https://github.com/gregdavill/valentyusb
+	url = https://github.com/litex-hub/valentyusb.git
 	branch = hw_cdc_eptri
 [submodule "hw/deps/litedram"]
 	path = hw/deps/litedram

@@ -83,7 +83,7 @@ int main(int i, char **c)
 
 	printf("Test:DDR3 Start\n");
 	/* Init Memory */
-	int sdr_ok = sdrinit();
+	int sdr_ok = sdram_init();
 	if(sdr_ok == 0){
 		test_fail("Test:DDR3|Fail");
 		//self_reset_out_write(0xAA550001);
