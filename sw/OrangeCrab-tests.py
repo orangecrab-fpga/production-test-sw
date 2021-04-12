@@ -236,11 +236,11 @@ while test_running == False:
 # Load bootloader
 # display info while loading the bootloader
 print("-- Loading Bootloader into FLASH..")
-bootloader = '../prebuilt/foboot-v3.1-orangecrab-r0.2-25F.bit'
+bootloader = '../prebuilt/foboot-v3.1-orangecrab-r0.2-85F.bit'
 execute(["ecpprog", bootloader])
 
 # Load program that monitors button, and then reboots into bootloader
-test_bitstream = '../prebuilt/orangecrab-reboot-25F.bit'
+test_bitstream = '../prebuilt/orangecrab-reboot-85F.bit'
 cmd = subprocess.Popen(["ecpprog", "-S", test_bitstream],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE)
