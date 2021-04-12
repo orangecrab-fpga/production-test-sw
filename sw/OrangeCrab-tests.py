@@ -168,7 +168,7 @@ def ProcessLines(line):
 # Load test-bitstream over JTAG
 print("-- Loading test bitstream into SRAM..")
 #test_bitstream = '../hw/build/orangecrab/gateware/orangecrab.bit'
-test_bitstream = '../prebuilt/orangecrab-test-25F.bit'
+test_bitstream = '../prebuilt/orangecrab-test-85F.bit'
 cmd = subprocess.Popen(["ecpprog", "-S", test_bitstream],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE)
@@ -180,8 +180,8 @@ cmd = subprocess.Popen(["ecpprog", "-S", test_bitstream],
 #b'init..\nreset..\nprogramming..\nBye.\n'
 
 # check results of programming
-if "IDCODE: 0x41111043" in cmd_stdout.decode('ascii'):
-    print("JTAG:LFE5U-25 Detected")
+if "IDCODE: 0x41113043" in cmd_stdout.decode('ascii'):
+    print("JTAG:LFE5U-85 Detected")
     #if "ECP5 Status Register: 0x00200100" in cmd_stdout.decode('ascii'):
     #    print("JTAG:Load Sucessful")
     #else:
